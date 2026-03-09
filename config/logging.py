@@ -40,4 +40,4 @@ def setup_logging():
 
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
-    logging.info("++=============日志系统初始化完成，最近启动时间：%s=============++", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
