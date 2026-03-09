@@ -1,8 +1,14 @@
 # database/db_manager.py
+import sys
+import os
 import sqlite3
 import pandas as pd
 import logging
 from pathlib import Path
+
+# 添加项目根目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import notify
 
 
 logger = logging.getLogger(__name__)
@@ -19,8 +25,17 @@ class DatabaseManager:
         self.db_path = db_path
         # 确保数据库目录存在
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._create_tables()
-        logger.info(f'数据库管理器初始化完成，路径: {db_path}')
+        try:
+            self._create_tables()
+            logger.info('数据库表创建/检查完成')
+            notify('数据库表创建/检查完成')
+            logger.info(f'数据库管理器初始化完成，路径: {db_path}')
+            notify(f'数据库连接成功，路径: {db_path}')
+        except Exception as e:
+            error_msg = f'数据库初始化失败: {e}'
+            logger.error(error_msg)
+            notify(error_msg)
+            raise
     
     def get_connection(self):
         """获取数据库连接（每次操作后记得关闭）"""
@@ -110,16 +125,30 @@ class DatabaseManager:
         finally:
             conn.close()
     
-    def import_dga_data(self, excel_file='DGA_data.xlsx'):##默认路径DGA_data.xlsx
+    def import_dga_data(self, excel_file='DGA_data.xlsx', progress_callback=None, progress_value_callback=None):
         """
         从Excel文件导入DGA数据到数据库
         
         Args:
             excel_file (str): Excel文件名，默认在 data 目录下
+            progress_callback (callable): 进度回调函数，用于发送进度通知
+            progress_value_callback (callable): 进度值回调函数，用于发送进度百分比
         
         Returns:
             int: 导入的记录数
         """
+        # 定义通知函数
+        def send_notification(message):
+            if progress_callback:
+                progress_callback(message)
+            else:
+                notify(message)
+        
+        # 定义进度值函数
+        def send_progress_value(value):
+            if progress_value_callback:
+                progress_value_callback(value)
+        
         import os
         
         # 获取Excel文件路径
@@ -128,10 +157,16 @@ class DatabaseManager:
         excel_path = os.path.join(data_dir, excel_file)
         
         try:
+            send_notification(f"开始导入数据: {excel_file}")
+            send_progress_value(0)
             # 读取Excel文件
             df = pd.read_excel(excel_path)
             logger.info(f"成功读取Excel文件: {excel_path}")
+            send_notification(f"成功读取Excel文件: {excel_file}")
+            send_progress_value(10)
             logger.info(f"数据形状: {df.shape}")
+            send_notification(f"数据形状: {df.shape}")
+            send_progress_value(20)
             
             # 保存原始列名
             original_columns = df.columns.tolist()
@@ -146,19 +181,19 @@ class DatabaseManager:
             label_column = None
             
             # 更灵活的故障类型列识别
-            fault_type_keywords = ['故障类别', 'fault_type', '故障', '类型', 'label', '标签', 'fault']
-            
             # 检查标准化后的列名
             for col in df.columns:
-                # 检查中文关键词
-                if any(key in col for key in ['故障', '类型', '标签']):
+                # 检查故障类型相关关键词
+                if any(key in col for key in ['故障类别', 'fault_type', '故障', '类型', 'label', '标签', 'fault']):
                     label_column = col
                     logger.info(f"识别到故障类型列: {col}")
+                    notify(f"识别到故障类型列: {col}")
                     break
                 # 检查英文关键词
                 if any(key in col for key in ['fault', 'label']):
                     label_column = col
                     logger.info(f"识别到故障类型列: {col}")
+                    notify(f"识别到故障类型列: {col}")
                     break
             
             if label_column:
@@ -166,6 +201,7 @@ class DatabaseManager:
                 logger.info(f"添加故障类型列到导入列表: {label_column}")
             else:
                 logger.warning("未找到故障类型列，将不导入故障类型数据")
+                notify("未找到故障类型列，将不导入故障类型数据")
             
             # 过滤数据
             valid_columns = [col for col in required_columns if col in df.columns]
@@ -174,10 +210,24 @@ class DatabaseManager:
             # 去除空值
             df_filtered = df_filtered.dropna()
             logger.info(f"过滤后数据形状: {df_filtered.shape}")
+            send_notification(f"过滤后数据形状: {df_filtered.shape}")
+            send_progress_value(30)
             
             # 导入数据到数据库
             conn = self.get_connection()
             cursor = conn.cursor()
+            
+            # 检查是否已存在相同来源文件的数据
+            check_query = "SELECT COUNT(*) FROM oil_chromatography WHERE source_file = ?"
+            cursor.execute(check_query, (excel_file,))
+            existing_count = cursor.fetchone()[0]
+            
+            if existing_count > 0:
+                logger.warning(f"数据库中已存在 {existing_count} 条来自 {excel_file} 的数据")
+                send_notification(f"数据库中已存在 {existing_count} 条来自 {excel_file} 的数据")
+                logger.info("如需重新导入，请先手动清空oil_chromatography表")
+                conn.close()
+                return existing_count
             
             # 构建动态的插入语句，根据实际存在的列
             db_columns = ['sample_id', 'h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
@@ -195,11 +245,17 @@ class DatabaseManager:
             """
             
             imported_count = 0
-            for idx, row in df_filtered.iterrows():
-                sample_id = f"DGA_{idx+1}"
+            send_notification("开始插入数据到数据库...")
+            send_progress_value(40)
+            total_count = len(df_filtered)
+            
+            for _, row in df_filtered.iterrows():
+                # 使用导入计数作为索引，避免类型转换问题
+                current_index = imported_count + 1
+                sample_id = f"DGA_{current_index}"
                 
                 # 构建参数，根据列名动态获取值
-                params = [sample_id]
+                params: list = [sample_id]
                 
                 # 添加气体成分数据
                 gas_columns = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
@@ -207,35 +263,54 @@ class DatabaseManager:
                     # 尝试不同的列名变体
                     found_value = None
                     for col in df.columns:
-                        if col.strip().lower() == gas_col:
+                        if str(col).strip().lower() == gas_col:
                             found_value = row.get(col, None)
                             break
                     params.append(found_value)
                 
                 # 添加故障类型
                 if label_column:
-                    params.append(row.get(label_column, None))
+                    fault_type_value = row.get(label_column, None)
+                    if fault_type_value is not None:
+                        params.append(str(fault_type_value))
+                    else:
+                        params.append('')
                 
                 # 添加来源文件
-                params.append(excel_file)
+                params.append(str(excel_file))
                 
                 try:
                     cursor.execute(insert_query, params)
-                    imported_count += 1
+                    imported_count = int(imported_count) + 1
+                    
+                    # 每插入10%的数据更新一次进度
+                    if imported_count % max(1, total_count // 10) == 0:
+                        progress = 40 + (imported_count / total_count) * 50
+                        send_progress_value(int(progress))
+                        
                 except Exception as e:
-                    logger.error(f"导入第 {idx+1} 条记录失败: {e}")  
+                    error_msg = f"导入第 {current_index} 条记录失败: {e}"
+                    logger.error(error_msg)
+                    send_notification(error_msg)
                     continue
             
             conn.commit()
-            logger.info(f"成功导入 {imported_count} 条DGA数据")
+            success_msg = f"成功导入 {imported_count} 条DGA数据"
+            logger.info(success_msg)
+            send_notification(success_msg)
+            send_progress_value(90)
             
             return imported_count
             
         except FileNotFoundError:
-            logger.error(f"未找到Excel文件: {excel_path}")
+            error_msg = f"未找到Excel文件: {excel_path}"
+            logger.error(error_msg)
+            notify(error_msg)
             raise
         except Exception as e:
-            logger.error(f"导入DGA数据失败: {e}")
+            error_msg = f"导入DGA数据失败: {e}"
+            logger.error(error_msg)
+            notify(error_msg)
             raise
         finally:
             if 'conn' in locals():

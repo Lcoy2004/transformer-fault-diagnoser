@@ -11,9 +11,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.db_manager import DatabaseManager
+from config import notify
 logger = logging.getLogger(__name__)
 
-def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='database/fault_data.db', feature_columns=None, n_components=0.95):
+def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='database/fault_data.db', feature_columns=None, n_components=0.95, progress_callback=None, progress_value_callback=None):
     """
     训练PCA模型并保存
     
@@ -23,6 +24,8 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         db_path (str): 数据库文件路径，当 data_source 为 'database' 时使用
         feature_columns (list): 特征列名列表，默认使用 ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
         n_components (float or int): PCA 组件数量，默认保留95%方差
+        progress_callback (callable): 进度回调函数，用于发送进度通知
+        progress_value_callback (callable): 进度值回调函数，用于发送进度百分比
     
     Returns:
         dict: 包含以下键的字典:
@@ -34,6 +37,17 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             - pca_path: PCA 模型保存路径
             - scaler_path: 标准化模型保存路径
     """
+    # 定义通知函数
+    def send_notification(message):
+        if progress_callback:
+            progress_callback(message)
+        else:
+            notify(message)
+    
+    # 定义进度值函数
+    def send_progress_value(value):
+        if progress_value_callback:
+            progress_value_callback(value)
     # 获取项目根目录
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     models_dir = os.path.join(root_dir, 'models')
@@ -41,17 +55,16 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     # 确保目录存在
     os.makedirs(models_dir, exist_ok=True)
     
+    send_notification("开始PCA降维训练")
+    send_progress_value(0)
     # 读取数据
     try:
         if data_source == 'database':
             # 从数据库读取数据
+            send_notification("从数据库读取数据...")
+            send_progress_value(10)
             db_manager = DatabaseManager(db_path=db_path)
             conn = db_manager.get_connection()
-            
-            # 查询 oil_chromatography 表结构和数据
-            table_info_query = "PRAGMA table_info(oil_chromatography)"
-            table_info = pd.read_sql_query(table_info_query, conn)
-            logger.info(f"oil_chromatography 表结构:\n{table_info}")
             
             # 查询油色谱数据
             query = "SELECT h2, ch4, c2h6, c2h4, c2h2, fault_type, fault_location FROM oil_chromatography"
@@ -60,15 +73,21 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             conn.close()
             
             logger.info(f"成功从数据库读取数据，形状: {df.shape}")
+            send_notification(f"成功从数据库读取数据，形状: {df.shape}")
             logger.info(f"数据库路径: {db_path}")
         else:
             # 从Excel文件读取数据
+            send_notification(f"从Excel文件读取数据: {data_file}")
+            send_progress_value(10)
             data_dir = os.path.join(root_dir, 'data')
             data_path = os.path.join(data_dir, data_file)
             df = pd.read_excel(data_path)
             logger.info(f"成功读取数据文件: {data_path}")
+            send_notification(f"成功读取数据文件: {data_file}")
     except Exception as e:
-        logger.error(f"读取数据失败: {e}")
+        error_msg = f"读取数据失败: {e}"
+        logger.error(error_msg)
+        send_notification(error_msg)
         raise
     
     # 默认特征列
@@ -85,7 +104,10 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     try:
         X = df[feature_columns].values
         logger.info(f"提取特征: {feature_columns}")
+        send_notification(f"提取特征: {feature_columns}")
+        send_progress_value(20)
         logger.info(f"原始数据形状: {X.shape}")
+        send_notification(f"原始数据形状: {X.shape}")
     except KeyError as e:
         # 尝试大小写转换
         adjusted_columns = []
@@ -97,24 +119,37 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             elif col.upper() in df.columns:
                 adjusted_columns.append(col.upper())
             else:
-                logger.error(f"列 {col} 不存在于数据中")
+                error_msg = f"列 {col} 不存在于数据中"
+                logger.error(error_msg)
+                send_notification(error_msg)
                 raise
         
         X = df[adjusted_columns].values
         logger.info(f"调整后提取特征: {adjusted_columns}")
+        send_notification(f"调整后提取特征: {adjusted_columns}")
+        send_progress_value(20)
         logger.info(f"原始数据形状: {X.shape}")
+        send_notification(f"原始数据形状: {X.shape}")
     
     # 标准化
+    send_notification("开始数据标准化...")
+    send_progress_value(30)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     logger.info("数据标准化完成")
+    send_notification("数据标准化完成")
     
     # PCA 降维
+    send_notification("开始PCA降维...")
+    send_progress_value(40)
     pca = PCA(n_components=n_components)
     X_pca = pca.fit_transform(X_scaled)
     logger.info(f"PCA 降维完成，保留 {X_pca.shape[1]} 个主成分")
+    send_notification(f"PCA 降维完成，保留 {X_pca.shape[1]} 个主成分")
+    send_progress_value(60)
     logger.info(f"方差贡献率: {pca.explained_variance_ratio_}")
     logger.info(f"累计贡献率: {pca.explained_variance_ratio_.cumsum()}")
+    send_notification(f"累计方差贡献率: {pca.explained_variance_ratio_.cumsum()[-1]:.4f}")
     
     # 保存模型
     pca_path = os.path.join(models_dir, 'pca_model.pkl')
@@ -124,11 +159,15 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     joblib.dump(scaler, scaler_path)
     
     logger.info(f"模型已保存到: {models_dir}")
+    send_notification(f"模型已保存到: {models_dir}")
+    send_progress_value(70)
     logger.info(f"PCA 模型: {pca_path}")
     logger.info(f"标准化模型: {scaler_path}")
     
     # 将PCA降维结果保存到数据库
     try:
+        send_notification("将PCA结果保存到数据库...")
+        send_progress_value(80)
         db_manager = DatabaseManager(db_path=db_path)
         conn = db_manager.get_connection()
         cursor = conn.cursor()
@@ -137,6 +176,7 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         cursor.execute("DELETE FROM fusion_features")
         conn.commit()
         logger.info("已清空 fusion_features 表")
+        send_notification("已清空 fusion_features 表")
         
         import json
         
@@ -145,8 +185,8 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         model_id = f"PCA_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # 从原始数据中获取故障类型和故障位置
-        fault_types = df.get('fault_type', [None]*len(X_pca))
-        fault_locations = df.get('fault_location', [None]*len(X_pca))
+        fault_types = df['fault_type'].values if 'fault_type' in df.columns else [None]*len(X_pca)
+        fault_locations = df['fault_location'].values if 'fault_location' in df.columns else [None]*len(X_pca)
         
         # 插入融合特征数据
         insert_query = """
@@ -156,6 +196,8 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         """
         
         inserted_count = 0
+        total_count = len(X_pca)
+        
         for i, (pc_values, fault_type, fault_location) in enumerate(zip(X_pca, fault_types, fault_locations)):
             sample_id = f"PCA_{i+1}"
             
@@ -169,17 +211,31 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             try:
                 cursor.execute(insert_query, params)
                 inserted_count += 1
+                
+                # 每插入10%的数据更新一次进度
+                if inserted_count % max(1, total_count // 10) == 0:
+                    progress = 80 + (inserted_count / total_count) * 15
+                    send_progress_value(int(progress))
+                    
             except Exception as e:
-                logger.error(f"插入第 {i+1} 条PCA结果失败: {e}")
+                error_msg = f"插入第 {i+1} 条PCA结果失败: {e}"
+                logger.error(error_msg)
+                send_notification(error_msg)
                 continue
         
         conn.commit()
-        logger.info(f"成功将 {inserted_count} 条PCA结果保存到数据库")
+        success_msg = f"成功将 {inserted_count} 条PCA结果保存到数据库"
+        logger.info(success_msg)
+        send_notification(success_msg)
+        send_progress_value(95)
         conn.close()
     except Exception as e:
-        logger.error(f"保存PCA结果到数据库失败: {e}")
+        error_msg = f"保存PCA结果到数据库失败: {e}"
+        logger.error(error_msg)
+        send_notification(error_msg)
     
     # 返回模型信息
+    send_progress_value(100)
     return {
         'pca_model': pca,
         'scaler': scaler,
