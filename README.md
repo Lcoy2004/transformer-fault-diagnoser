@@ -1,70 +1,154 @@
+
+
 # TransformerFaultDiagnoser
 
-#### 介绍
-+-----------------------------------------------------------------------------------+
-| 菜单栏 (menubar): 文件  编辑  视图  工具  帮助                                     |
-+-----------------------------------------------------------------------------------+
-| [工具栏]                                                                          |
-| +---------------------+  +-------------------------+  +-------------------------+ |
-| | 数据导入区          |  | 特征提取区              |  | 诊断操作区              | |
-| | [油色谱] [高频]     |  | [PCA降维] [特征融合]    |  | [开始诊断] [导出报告]   | |
-| | [特高频] [清空]     |  | [训练模型]              |  | [重置] [设置]           | |
-| +---------------------+  +-------------------------+  +-------------------------+ |
-+--------------------------------+--------------------------------------------------+
-|                                |                                                  |
-| 左侧数据区 (样本库/待诊数据)    | 中央结果区                                        |
-| (QSplitter左半部分)            | (QSplitter右半部分)                               |
-| +----------------------------+ | +----------------------------+                  |
-| | 油色谱 | 高频 | 特高频 |    | | | 诊断结果 | 图表分析 | 日志  |                  |
-| | 融合特征   (QTabWidget)     | | | (QTabWidget)               |                  |
-| |                            | | |                            |                  |
-| | [表格视图]                  | | | [诊断报告 - 富文本]        |                  |
-| | (QTableView)                | | | (QTextEdit)                |                  |
-| | 显示当前选中数据源的原始记录 | | | - 故障类型: 高温过热        |                  |
-| | (有标签的训练样本 或         | | | - 故障位置: A相绕组 (距顶1.2m)|                  |
-| |  待诊断的无标签数据)         | | | - 置信度: 92.3%            |                  |
-| |                            | | | - 融合特征: PC1=2.34, PC2=-1.2|                 |
-| |                            | | +----------------------------+                  |
-| |                            | | | [图表嵌入区]               |                  |
-| |                            | | | (FigureCanvas)             |                  |
-| |                            | | | 可切换显示:                |                  |
-| |                            | | | - PCA贡献率柱状图          |                  |
-| |                            | | | - 样本分布散点图(2D/3D)    |                  |
-| |                            | | | - 故障位置示意图           |                  |
-| +----------------------------+ +--------------------------------------------------+
-|                                                                                   |
-| 状态栏 (QStatusBar): [数据库:样本库(120条)] | [当前操作:就绪] | [=====     ] 60% | [15:30:45] |
-+-----------------------------------------------------------------------------------+
+变压器故障诊断系统 - 基于油色谱分析（DGA）和机器学习算法的智能诊断工具
 
-#### 软件架构
-软件架构说明
+## 项目简介
 
+TransformerFaultDiagnoser 是一款专业的变压器故障诊断软件，采用油色谱分析（DGA）技术结合机器学习算法（PCA降维 + 随机森林分类），实现对变压器故障类型、位置和置信度的智能诊断。
 
-#### 安装教程
+### 主要功能
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- **数据导入**：支持油色谱数据、高频放电数据、特高频放电数据的导入和管理
+- **特征提取**：提供PCA降维和特征融合功能，提取关键故障特征
+- **模型训练**：基于随机森林算法训练故障分类模型
+- **智能诊断**：快速分析待诊断数据，输出故障类型、位置和置信度
+- **可视化分析**：提供PCA贡献率柱状图、样本分布散点图、故障位置示意图
+- **报告导出**：生成详细的诊断报告
 
-#### 使用说明
+## 软件架构
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```
+TransformerFaultDiagnoser/
+├── config/              # 配置模块
+│   ├── logging.py      # 日志配置
+│   └── notification.py # 通知管理
+├── database/           # 数据库模块
+│   └── db_manager.py   # SQLite数据库管理
+├── models/             # 训练好的模型
+│   ├── pca_model.pkl   # PCA降维模型
+│   ├── random_forest_multioutput_model.pkl  # 随机森林模型
+│   └── scaler.pkl      # 数据标准化器
+├── ui/                 # UI界面模块
+│   ├── mainui.ui       # Qt UI定义
+│   └── mainui_ui.py    # UI生成代码
+├── utils/              # 工具模块
+│   ├── random_forest.py  # 随机森林训练与预测
+│   └── train_pca.py      # PCA模型训练
+├── data/               # 数据目录
+│   └── DGA_data.xlsx  # 油色谱样本数据
+├── test/               # 测试模块
+│   └── test_main_gui.py # GUI测试
+└── main.py             # 主程序入口
+```
 
-#### 参与贡献
+### 技术栈
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+- **GUI框架**: PyQt5
+- **数据库**: SQLite3
+- **机器学习**: Scikit-learn (PCA, Random Forest)
+- **数据处理**: Pandas, NumPy
 
+## 安装教程
 
-#### 特技
+### 环境要求
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- Python 3.8+
+- PyQt5
+- pandas
+- numpy
+- scikit-learn
+- openpyxl
+
+### 安装步骤
+
+1. 克隆项目到本地：
+```bash
+git clone https://gitee.com/lcoy/transformer-fault-diagnoser.git
+cd transformer-fault-diagnoser
+```
+
+2. 创建并激活虚拟环境（推荐）：
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+```
+
+3. 安装依赖包：
+```bash
+pip install -r requirements.txt
+```
+
+如果项目中没有requirements.txt，可手动安装：
+```bash
+pip install PyQt5 pandas numpy scikit-learn openpyxl
+```
+
+4. 初始化数据库：
+```bash
+# 运行主程序后，数据导入功能会自动创建数据库
+python main.py
+```
+
+## 使用说明
+
+### 1. 数据导入
+
+- 点击工具栏中的「油色谱」按钮导入DGA数据
+- 支持Excel格式的油色谱数据文件
+- 数据将自动存储到SQLite数据库中
+
+### 2. 特征提取
+
+- **PCA降维**：对高维特征进行降维处理，保留主要信息
+- **特征融合**：整合多种特征，提高诊断准确性
+
+### 3. 模型训练
+
+- 点击「训练模型」按钮开始训练随机森林分类模型
+- 训练过程中可查看进度条
+- 训练完成后模型会自动保存
+
+### 4. 故障诊断
+
+- 导入待诊断的变压器数据
+- 点击「开始诊断」按钮
+- 查看诊断结果：故障类型、故障位置、置信度
+
+### 5. 报告导出
+
+- 诊断完成后可导出详细的诊断报告
+- 报告包含原始数据、诊断结果、图表分析
+
+## 目录结构说明
+
+| 目录/文件 | 说明 |
+|-----------|------|
+| config/ | 系统配置，包含日志和通知管理 |
+| database/ | 数据库操作，存储样本数据和诊断记录 |
+| models/ | 训练好的机器学习模型 |
+| ui/ | Qt用户界面定义 |
+| utils/ | 核心算法工具（PCA、随机森林） |
+| data/ | 原始数据文件 |
+| logs/ | 运行日志 |
+
+## 参与贡献
+
+1. Fork 本仓库
+2. 新建特性分支 (`git checkout -b feat/xxx`)
+3. 提交更改 (`git commit -m 'Add xxx'`)
+4. 推送分支 (`git push origin feat/xxx`)
+5. 新建 Pull Request
+
+## 许可证
+
+本项目仅供学习和研究使用。
+
+## 联系方式
+
+- 项目地址：https://gitee.com/lcoy/transformer-fault-diagnoser
+- 问题反馈：https://gitee.com/lcoy/transformer-fault-diagnoser/issues
