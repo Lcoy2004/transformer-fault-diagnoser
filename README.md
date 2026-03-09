@@ -55,7 +55,7 @@ TransformerFaultDiagnoser/
 ### 环境要求
 
 - Python 3.13+
-- PyQt5
+- PySide6
 - pandas
 - numpy
 - scikit-learn
