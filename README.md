@@ -45,7 +45,7 @@ TransformerFaultDiagnoser/
 
 ### 技术栈
 
-- **GUI框架**: PyQt5
+- **GUI框架**: PySide6
 - **数据库**: SQLite3
 - **机器学习**: Scikit-learn (PCA, Random Forest)
 - **数据处理**: Pandas, NumPy
@@ -54,7 +54,7 @@ TransformerFaultDiagnoser/
 
 ### 环境要求
 
-- Python 3.8+
+- Python 3.13+
 - PyQt5
 - pandas
 - numpy
@@ -85,7 +85,7 @@ pip install -r requirements.txt
 
 如果项目中没有requirements.txt，可手动安装：
 ```bash
-pip install PyQt5 pandas numpy scikit-learn openpyxl
+pip install PySide6 pandas numpy scikit-learn openpyxl
 ```
 
 4. 初始化数据库：
