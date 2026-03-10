@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    """数据库管理器：负责连接、建表、导入数据等操作"""
+    """数据库管理器：负责连接、建表、导入，查询数据等操作"""
     
     def __init__(self, db_path='database/fault_data.db'):
         """
@@ -344,6 +344,70 @@ class DatabaseManager:
             logger.info('变压器局部放电特征数据表创建/检查完成')
         except Exception as e:
             logger.error(f'创建局部放电表失败: {e}')
+            raise
+        finally:
+            conn.close()
+    
+    def get_all_tables(self):
+        """
+        获取数据库中的所有表
+        
+        Returns:
+            list: 表名列表
+        """
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            # 查询所有表
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+            tables = [row[0] for row in cursor.fetchall()]
+            logger.info(f"获取到的表列表: {tables}")
+            return tables
+        except Exception as e:
+            logger.error(f'获取表列表失败: {e}')
+            raise
+        finally:
+            conn.close()
+    
+    def get_table_data(self, table_name):
+        """
+        获取指定表的数据
+        
+        Args:
+            table_name (str): 表名
+        
+        Returns:
+            tuple: (data, columns)
+                data: 数据行列表
+                columns: 列名列表
+        """
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            logger.info(f"获取表 {table_name} 的数据")
+            
+            # 安全地引用表名
+            # 使用单引号包裹表名，避免SQL注入
+            safe_table_name = f"'{table_name}'"
+            
+            # 查询表结构
+            cursor.execute("PRAGMA table_info(" + table_name + ")")
+            columns_info = cursor.fetchall()
+            columns = [col[1] for col in columns_info]
+            logger.info(f"表 {table_name} 的列: {columns}")
+            
+            # 查询表数据
+            cursor.execute("SELECT * FROM " + table_name)
+            data = cursor.fetchall()
+            
+            # 将Row对象转换为元组
+            data = [tuple(row) for row in data]
+            logger.info(f"表 {table_name} 的数据行数: {len(data)}")
+            
+            return data, columns
+        except Exception as e:
+            logger.error(f'获取表数据失败: {e}, 表名: {table_name}')
             raise
         finally:
             conn.close()
