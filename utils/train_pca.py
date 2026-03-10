@@ -66,14 +66,62 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             db_manager = DatabaseManager(db_path=db_path)
             conn = db_manager.get_connection()
             
-            # 查询油色谱数据
-            query = "SELECT h2, ch4, c2h6, c2h4, c2h2, fault_type, fault_location FROM oil_chromatography"
-            df = pd.read_sql_query(query, conn)
+            # 定义不同表的查询配置
+            table_configs = {
+                'oil_chromatography': {
+                    'query': "SELECT h2, ch4, c2h6, c2h4, c2h2, fault_type, fault_location FROM oil_chromatography",
+                    'features': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2'],
+                    'source': 'DGA'
+                },
+                'hf_partial_discharge': {
+                    'query': "SELECT amplitude, frequency, phase, pulse_count, fault_type, fault_location FROM hf_partial_discharge",
+                    'features': ['amplitude', 'frequency', 'phase', 'pulse_count'],
+                    'source': 'HF'
+                },
+                'uhf_partial_discharge': {
+                    'query': "SELECT amplitude, frequency, phase, time_difference, fault_type, fault_location FROM uhf_partial_discharge",
+                    'features': ['amplitude', 'frequency', 'phase', 'time_difference'],
+                    'source': 'UHF'
+                }
+            }
+            
+            # 读取所有可用的表数据
+            dfs = []
+            for table_name, config in table_configs.items():
+                try:
+                    # 检查表是否存在
+                    cursor = conn.cursor()
+                    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                    if cursor.fetchone():
+                        # 表存在，读取数据
+                        df_table = pd.read_sql_query(config['query'], conn)
+                        if not df_table.empty:
+                            df_table['source'] = config['source']
+                            dfs.append(df_table)
+                            logger.info(f"成功读取表 {table_name}，形状: {df_table.shape}")
+                            send_notification(f"成功读取表 {table_name}，形状: {df_table.shape}")
+                        else:
+                            logger.warning(f"表 {table_name} 为空")
+                            send_notification(f"表 {table_name} 为空")
+                    else:
+                        logger.warning(f"表 {table_name} 不存在")
+                        send_notification(f"表 {table_name} 不存在")
+                except Exception as e:
+                    logger.error(f"读取表 {table_name} 失败: {e}")
+                    send_notification(f"读取表 {table_name} 失败: {e}")
             
             conn.close()
             
-            logger.info(f"成功从数据库读取数据，形状: {df.shape}")
-            send_notification(f"成功从数据库读取数据，形状: {df.shape}")
+            if not dfs:
+                error_msg = "没有找到有效的数据表"
+                logger.error(error_msg)
+                send_notification(error_msg)
+                raise ValueError(error_msg)
+            
+            # 合并所有数据
+            df = pd.concat(dfs, ignore_index=True)
+            logger.info(f"成功合并所有表数据，形状: {df.shape}")
+            send_notification(f"成功合并所有表数据，形状: {df.shape}")
             logger.info(f"数据库路径: {db_path}")
         else:
             # 从Excel文件读取数据
@@ -90,15 +138,27 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         send_notification(error_msg)
         raise
     
-    # 默认特征列
+    # 根据数据来源选择特征列
     if feature_columns is None:
-        # 检查数据框的列名，自动调整大小写
-        if 'h2' in df.columns:
-            # 数据库来源，列名是小写
+        # 检查数据框的列名，自动选择特征列
+        if 'h2' in df.columns and 'ch4' in df.columns:
+            # DGA数据
             feature_columns = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
+        elif 'amplitude' in df.columns and 'frequency' in df.columns and 'pulse_count' in df.columns:
+            # HF局部放电数据
+            feature_columns = ['amplitude', 'frequency', 'phase', 'pulse_count']
+        elif 'amplitude' in df.columns and 'frequency' in df.columns and 'time_difference' in df.columns:
+            # UHF局部放电数据
+            feature_columns = ['amplitude', 'frequency', 'phase', 'time_difference']
         else:
-            # Excel来源，列名可能是大写
-            feature_columns = ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2']
+            # 尝试从所有可能的特征列中选择
+            possible_features = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'amplitude', 'frequency', 'phase', 'pulse_count', 'time_difference']
+            feature_columns = [col for col in possible_features if col in df.columns]
+            if not feature_columns:
+                error_msg = "无法识别数据类型，没有找到有效的特征列"
+                logger.error(error_msg)
+                send_notification(error_msg)
+                raise ValueError(error_msg)
     
     # 提取特征
     try:
