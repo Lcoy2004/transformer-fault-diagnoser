@@ -98,6 +98,14 @@ class ModelManager:
             self.ui_manager.update_output("模型类型: 多输出模型（故障类型+位置）")
         else:
             self.ui_manager.update_output("模型类型: 单输出模型（仅故障类型）")
+        
+        # 重新加载预测器模型
+        try:
+            self.data_processor.reload_predictor()
+            self.ui_manager.update_output("预测器模型已重新加载")
+        except Exception as e:
+            logger.error(f"重新加载预测器失败: {e}")
+            self.ui_manager.update_output(f"警告: 重新加载预测器失败: {e}")
     
     def predict(self, input_data):
         """

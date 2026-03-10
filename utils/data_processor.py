@@ -219,3 +219,14 @@ class DataProcessor:
             notify(error_msg)
             logger.error(error_msg)
             raise
+    
+    def reload_predictor(self):
+        """重新加载预测器模型"""
+        try:
+            self.predictor = Predictor()
+            logger.info("预测器模型重新加载成功")
+        except Exception as e:
+            error_msg = f"预测器模型重新加载失败: {e}"
+            notify(error_msg)
+            logger.error(error_msg)
+            raise

@@ -55,8 +55,9 @@ class InputManager:
     
     def update_input_table(self):
         """根据选择的输入类型更新输入表格"""
-        input_type = self.get_selected_input_type()
-        columns = self.input_configs.get(input_type, ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2'])
+        # 获取显示名称（用于查找列配置）
+        display_type = self.input_combobox.currentText()
+        columns = self.input_configs.get(display_type, ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2'])
         
         # 设置表格列数和列名
         self.showinput_tableWidget.setColumnCount(len(columns))
@@ -72,7 +73,9 @@ class InputManager:
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.showinput_tableWidget.setItem(row, col, item)
         
-        logger.info(f"更新输入表格为 {input_type} 类型，列: {columns}")
+        # 获取内部类型名称用于日志
+        internal_type = self.type_mapping.get(display_type, display_type)
+        logger.info(f"更新输入表格为 {internal_type} 类型，列: {columns}")
     
     def on_input_type_changed(self, index):
         """输入类型变化处理"""
