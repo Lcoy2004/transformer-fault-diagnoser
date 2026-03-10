@@ -73,9 +73,14 @@ class Predictor:
         try:
             # 检查是否有对应的模型
             if data_type not in self.scalers:
-                if data_type in ['HF', 'UHF']:
-                    logger.warning(f"没有{data_type}类型的专用模型，将使用DGA模型进行预测（可能不准确）")
-                    data_type = 'DGA'
+                if data_type == 'DGA':
+                    raise ValueError("DGA模型未加载，请先训练模型")
+                elif data_type in ['HF', 'UHF']:
+                    if 'DGA' in self.scalers:
+                        logger.warning(f"没有{data_type}类型的专用模型，将使用DGA模型进行预测（可能不准确）")
+                        data_type = 'DGA'
+                    else:
+                        raise ValueError(f"{data_type}模型和DGA模型都未加载，请先训练模型")
                 else:
                     raise ValueError(f"不支持的预测类型: {data_type}")
             

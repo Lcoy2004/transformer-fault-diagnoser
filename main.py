@@ -131,11 +131,11 @@ class MainWindow(QMainWindow):
             
             # 将输入类型转换为数据类型
             data_type_map = {
-                "DGA数据": "DGA",
-                "HF局部放电": "HF",
-                "UHF局部放电": "UHF"
+                "DGA": "DGA",
+                "HF": "HF",
+                "UHF": "UHF"
             }
-            data_type = data_type_map.get(input_type, "DGA")  # 确保input_type为字符串，get方法参数正确
+            data_type = data_type_map.get(input_type or "DGA", "DGA")
             
             # 开始预测
             fault_type, fault_location = self.data_processor.predict(input_data, data_type)
@@ -191,9 +191,9 @@ class MainWindow(QMainWindow):
             file_dialog = QFileDialog()
             file_dialog.setWindowTitle("选择数据文件")
             file_dialog.setNameFilter("Excel文件 (*.xlsx)")
-            file_dialog.setFileMode(QFileDialog.ExistingFile)
+            file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
             
-            if file_dialog.exec() == QFileDialog.Accepted:
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]
                 
                 # 清空输出
