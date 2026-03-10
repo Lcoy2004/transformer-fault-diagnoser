@@ -50,6 +50,51 @@ TransformerFaultDiagnoser/
 - **机器学习**: Scikit-learn (PCA, Random Forest)
 - **数据处理**: Pandas, NumPy
 
+## 核心模块说明
+
+### config/notification.py
+
+通知管理模块，提供系统消息通知功能。
+
+- `NotificationManager`: 通知管理器类
+  - `add_notification(message)`: 添加通知消息
+  - `get_current_notification()`: 获取当前通知
+  - `get_notification_with_timestamp()`: 获取带时间戳的通知
+  - `clear_notification()`: 清除通知
+
+### database/db_manager.py
+
+数据库管理模块，负责SQLite数据库操作。
+
+- `DatabaseManager`: 数据库管理器类
+  - `__init__(db_path)`: 初始化数据库连接
+  - `get_connection()`: 获取数据库连接
+  - `_create_tables()`: 创建数据表
+  - `import_dga_data(excel_file, progress_callback, progress_value_callback)`: 导入DGA数据
+  - `create_partial_discharge_table()`: 创建放电数据表
+  - `get_all_tables()`: 获取所有数据表
+  - `get_table_data(table_name)`: 获取指定表数据
+
+### utils/random_forest.py
+
+随机森林模块，用于模型训练和故障预测。
+
+- `train_random_forest(db_path, n_estimators, random_state, progress_callback, progress_value_callback)`: 训练随机森林模型
+- `predict_with_random_forest(X)`: 使用随机森林进行预测
+
+### utils/train_pca.py
+
+PCA降维模块，用于特征提取和降维。
+
+- `train_pca_model(data_source, data_file, db_path, feature_columns, n_components, progress_callback, progress_value_callback)`: 训练PCA模型
+
+### main.py
+
+主程序入口，包含GUI主窗口和后台工作线程。
+
+- `WorkerThread`: 后台工作线程类，用于执行耗时操作
+- `MainWindow`: 主窗口类，提供用户界面
+
 ## 安装教程
 
 ### 环境要求
