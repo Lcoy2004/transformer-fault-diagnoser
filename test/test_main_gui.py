@@ -11,7 +11,7 @@ from datetime import datetime
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar, QTextEdit
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar, QTextEdit, QTableWidget, QTableWidgetItem, QComboBox
 from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from config import setup_logging, notify, get_notification
 from database.db_manager import DatabaseManager
@@ -141,6 +141,43 @@ class MainTestApp(QWidget):
         """)
         main_layout.addWidget(self.log_text)
         
+        # 创建数据库表显示区域
+        table_section = QVBoxLayout()
+        
+        # 创建表选择和刷新布局
+        table_control_layout = QHBoxLayout()
+        
+        # 创建表选择下拉框
+        self.table_selector = QComboBox()
+        self.table_selector.addItem("选择表")
+        self.table_selector.currentIndexChanged.connect(self.on_table_changed)
+        table_control_layout.addWidget(QLabel("选择表:"))
+        table_control_layout.addWidget(self.table_selector)
+        
+        # 创建刷新按钮
+        self.btn_refresh_tables = QPushButton("刷新表列表")
+        self.btn_refresh_tables.clicked.connect(self.refresh_table_list)
+        table_control_layout.addWidget(self.btn_refresh_tables)
+        
+        table_section.addLayout(table_control_layout)
+        
+        # 创建数据表格
+        self.data_table = QTableWidget()
+        self.data_table.setStyleSheet("""
+            QTableWidget {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                border: 1px solid #ddd;
+                padding: 4px;
+            }
+        """)
+        table_section.addWidget(self.data_table)
+        
+        main_layout.addLayout(table_section)
+        
         self.setLayout(main_layout)
         
         # 创建定时器，用于更新通知标签和日志
@@ -150,6 +187,9 @@ class MainTestApp(QWidget):
         
         # 记录启动日志
         logger.info("测试应用程序启动")
+        
+        # 初始化数据库管理器
+        self.initialize_database()
     
     def update_ui(self):
         """更新UI"""
@@ -324,6 +364,118 @@ class MainTestApp(QWidget):
         self.btn_pca.setEnabled(True)
         self.btn_rf.setEnabled(True)
         self.btn_clear.setEnabled(True)
+    
+    def initialize_database(self):
+        """初始化数据库管理器"""
+        try:
+            if self.db_manager is None:
+                self.db_manager = DatabaseManager()
+                notify("数据库连接成功")
+                logger.info("数据库连接成功")
+            # 注意：这里不再自动刷新表列表，而是让用户手动点击刷新按钮
+        except Exception as e:
+            notify(f"数据库初始化失败: {str(e)}")
+            logger.error(f"数据库初始化失败: {str(e)}")
+    
+    def refresh_table_list(self):
+        """刷新表列表"""
+        try:
+            if self.db_manager is None:
+                self.initialize_database()
+                return
+            
+            # 断开信号连接，避免在填充列表时触发事件
+            self.table_selector.currentIndexChanged.disconnect(self.on_table_changed)
+            
+            # 获取数据库中的所有表
+            tables = self.db_manager.get_all_tables()
+            
+            # 清空下拉框并重新添加选项
+            self.table_selector.clear()
+            self.table_selector.addItem("选择表")
+            for table in tables:
+                self.table_selector.addItem(table)
+            
+            # 重新连接信号
+            self.table_selector.currentIndexChanged.connect(self.on_table_changed)
+            
+            notify("表列表刷新成功")
+            logger.info("表列表刷新成功")
+        except Exception as e:
+            notify(f"刷新表列表失败: {str(e)}")
+            logger.error(f"刷新表列表失败: {str(e)}")
+    
+    def on_table_changed(self, index):
+        """表选择变化处理"""
+        if index == 0:  # 选择了"选择表"选项
+            self.data_table.setRowCount(0)
+            self.data_table.setColumnCount(0)
+            return
+        
+        table_name = self.table_selector.currentText()
+        logger.info(f"用户选择了表: {table_name}")
+        if not table_name or table_name == "选择表":
+            logger.warning("无效的表名")
+            return
+        
+        self.load_table_data(table_name)
+    
+    def load_table_data(self, table_name):
+        """加载表数据"""
+        try:
+            if self.db_manager is None:
+                self.initialize_database()
+                return
+            
+            # 获取表数据
+            data, columns = self.db_manager.get_table_data(table_name)
+            
+            # 清空表格
+            self.data_table.setRowCount(0)
+            self.data_table.setColumnCount(0)
+            
+            if not columns:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "错误", f"表 {table_name} 不存在，请重新导入数据")
+                notify(f"表 {table_name} 结构不存在")
+                return
+            
+            if not data:
+                # 设置列
+                self.data_table.setColumnCount(len(columns))
+                self.data_table.setHorizontalHeaderLabels(columns)
+                
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "提示", f"表 {table_name} 为空，请先导入数据")
+                notify(f"表 {table_name} 为空，请先导入数据")
+                return
+            
+            # 设置列
+            self.data_table.setColumnCount(len(columns))
+            self.data_table.setHorizontalHeaderLabels(columns)
+            
+            # 设置行
+            self.data_table.setRowCount(len(data))
+            
+            # 填充数据
+            for row_idx, row in enumerate(data):
+                for col_idx, value in enumerate(row):
+                    item = QTableWidgetItem(str(value))
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.data_table.setItem(row_idx, col_idx, item)
+            
+            # 调整列宽
+            self.data_table.resizeColumnsToContents()
+            
+            notify(f"成功加载表 {table_name} 的数据")
+            logger.info(f"成功加载表 {table_name} 的数据，共 {len(data)} 行")
+        except Exception as e:
+            error_msg = f"加载表数据失败: {str(e)}"
+            notify(error_msg)
+            logger.error(error_msg)
+            
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "错误", error_msg)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
