@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialo
 from PySide6.QtCore import Qt
 
 from config import setup_logging, notify
-from ui import main_ui
+from ui import main_ui, aboutme_ui
 from utils import (
     UIManager, DataProcessor, ThreadManager,
     InputManager, TableManager, ModelManager
@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         
         # 菜单
         self.ui.action_6.triggered.connect(self._import_data)
+        self.ui.action_8.triggered.connect(self._show_about)
         
         # 选择器
         self.ui.table_selector.currentIndexChanged.connect(self._on_table_changed)
@@ -164,6 +165,38 @@ class MainWindow(QMainWindow):
         self._ui.update_output(f"导入完成: {result} 条记录")
         notify(f"导入完成: {result} 条记录")
         self._refresh_tables()
+    
+    def _show_about(self):
+        """显示关于窗口"""
+        from PySide6.QtWidgets import QDialog
+        
+        dialog = QDialog(self)
+        ui = aboutme_ui.Ui_Dialog_aboutme()
+        ui.setupUi(dialog)
+        
+        # 设置窗口标题
+        dialog.setWindowTitle("关于")
+        
+        # 添加Markdown内容
+        about_content = """
+## 本科毕业设计
+---
+### 基于多源监测数据的电力变压器故障智能诊断系统
+---
+
+**UNIVERSITY_NAME COLLEGE_NAME**  
+**学生**：AUTHOR_NAME（GRADE_INFO）  
+**项目地址**：[https://gitee.com/lcoy/transformer-fault-diagnoser](https://gitee.com/lcoy/transformer-fault-diagnoser)
+
+
+"""
+        
+        # 设置文本内容
+        ui.textEdit.setMarkdown(about_content)
+        
+        # 显示窗口
+        dialog.exec()
+
 
 
 def main():
