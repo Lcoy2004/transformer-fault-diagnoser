@@ -33,17 +33,17 @@ class DataImporter:
         self.table_columns = {
             'oil_chromatography': {
                 'required': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'fault_type', 'fault_location'],
-                'optional': [ '采集时间', '备注'],
+                'optional': ['sample_time'],
                 'keywords': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', '氢气', '甲烷', '乙烷', '乙烯', '乙炔']
             },
             'hf_partial_discharge': {
                 'required': ['amplitude', 'frequency', 'phase', 'pulse_count', 'fault_type', 'fault_location'],
-                'optional': [ '采集时间', '备注'],
+                'optional': ['sample_time'],
                 'keywords': ['amplitude', 'frequency', 'phase', 'pulse_count', '幅值', '频率', '相位', '脉冲']
             },
             'uhf_partial_discharge': {
                 'required': ['amplitude', 'frequency', 'phase', 'time_difference', 'fault_type', 'fault_location'],
-                'optional': ['采集时间', '备注'],
+                'optional': ['sample_time'],
                 'keywords': ['amplitude', 'frequency', 'phase', 'time_difference', '幅值', '频率', '相位', '时差']
             }
         }
@@ -52,7 +52,10 @@ class DataImporter:
         self.column_mapping = {
             '故障类别': 'fault_type',
             '故障位置': 'fault_location',
-            '故障类型': 'fault_type'
+            '故障类型': 'fault_type',
+            '采集时间': 'sample_time',
+            '采样时间': 'sample_time',
+            '时间': 'sample_time'
         }
     
     def detect_data_type(self, df):
@@ -102,7 +105,17 @@ class DataImporter:
         for req_col in required:
             found = False
             for col in columns:
+                # 更灵活的匹配：使用关键词匹配
                 if req_col in col:
+                    found_columns.append(req_col)
+                    found = True
+                    break
+                # 对于故障类别和位置，尝试匹配中文关键词
+                if req_col == 'fault_type' and any(keyword in col for keyword in ['故障', '类型', '类别']):
+                    found_columns.append(req_col)
+                    found = True
+                    break
+                if req_col == 'fault_location' and any(keyword in col for keyword in ['位置', '部位']):
                     found_columns.append(req_col)
                     found = True
                     break
@@ -172,6 +185,7 @@ class DataImporter:
             send_notification(f"成功导入 {imported_count} 条记录到表 {table_name}")
             send_progress_value(100)
             
+            logger.info(f"导入完成: {imported_count} 条记录")
             return imported_count
             
         except Exception as e:
@@ -223,14 +237,18 @@ class DataImporter:
         cursor = conn.cursor()
         
         try:
-            # 检查是否已存在相同来源文件的数据
-            check_query = f"SELECT COUNT(*) FROM {table_name} WHERE source_file = ?"
-            cursor.execute(check_query, (source_file,))
+            # 使用文件名而不是完整路径，避免路径变化导致重复导入
+            import os
+            file_name = os.path.basename(source_file)
+            
+            # 检查是否已存在相同文件名的数据
+            check_query = f"SELECT COUNT(*) FROM {table_name} WHERE source_file LIKE ?"
+            cursor.execute(check_query, (f"%{file_name}%",))
             existing_count = cursor.fetchone()[0]
             
             if existing_count > 0:
-                logger.warning(f"数据库中已存在 {existing_count} 条来自 {source_file} 的数据")
-                notify(f"数据库中已存在 {existing_count} 条来自 {source_file} 的数据")
+                logger.warning(f"数据库中已存在 {existing_count} 条来自 {file_name} 的数据")
+                notify(f"数据库中已存在 {existing_count} 条来自 {file_name} 的数据")
                 return existing_count
             
             # 构建插入语句
@@ -269,8 +287,8 @@ class DataImporter:
                             break
                     params.append(value)
                 
-                # 添加来源文件
-                params.append(str(source_file))
+                # 添加来源文件（使用文件名）
+                params.append(file_name)
                 
                 try:
                     cursor.execute(insert_query, params)

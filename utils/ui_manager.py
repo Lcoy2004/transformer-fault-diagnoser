@@ -1,69 +1,71 @@
-# utils/ui_manager.py
 """
-UI管理器：负责处理界面相关的操作
+UI 管理模块
 """
 
 import logging
 from datetime import datetime
+from typing import Optional
 from PySide6.QtCore import QTimer
-from config import notify, get_notification
+from PySide6.QtWidgets import QMainWindow
+from config import get_notification
 
 logger = logging.getLogger(__name__)
 
+
 class UIManager:
-    """UI管理器"""
+    """UI 管理器"""
     
-    def __init__(self, main_window):
+    def __init__(self, main_window: QMainWindow):
         """
-        初始化UI管理器
+        初始化 UI 管理器
         
         Args:
             main_window: 主窗口实例
         """
-        self.main_window = main_window
-        self.init_timers()
-        self.init_connections()
+        self._window = main_window
+        self._ui = main_window.ui
+        self._init_timers()
     
-    def init_timers(self):
+    def _init_timers(self) -> None:
         """初始化定时器"""
-        # 创建通知更新定时器
-        self.notification_timer = QTimer(self.main_window)
-        self.notification_timer.timeout.connect(self.update_notification)
-        self.notification_timer.start(1000)  # 每1秒更新一次
+        # 通知更新定时器
+        self._notification_timer = QTimer(self._window)
+        self._notification_timer.timeout.connect(self._update_notification)
+        self._notification_timer.start(1000)
         
-        # 创建时间更新定时器
-        self.time_timer = QTimer(self.main_window)
-        self.time_timer.timeout.connect(self.update_time)
-        self.time_timer.start(1000)  # 每1秒更新一次
+        # 时间更新定时器
+        self._time_timer = QTimer(self._window)
+        self._time_timer.timeout.connect(self._update_time)
+        self._time_timer.start(1000)
     
-    def init_connections(self):
-        """初始化信号连接"""
-        # 这里可以添加信号连接
-        pass
-    
-    def update_notification(self):
+    def _update_notification(self) -> None:
         """更新通知标签"""
         message = get_notification()
-        if message and hasattr(self.main_window.ui, 'notification_label'):
-            self.main_window.ui.notification_label.setText(message)
+        if message and hasattr(self._ui, 'notification_label'):
+            self._ui.notification_label.setText(message)
     
-    def update_time(self):
+    def _update_time(self) -> None:
         """更新时间标签"""
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if hasattr(self.main_window.ui, 'showtime_label'):
-            self.main_window.ui.showtime_label.setText(current_time)
+        if hasattr(self._ui, 'showtime_label'):
+            self._ui.showtime_label.setText(current_time)
     
-    def update_progress(self, value):
+    def update_progress(self, value: int) -> None:
         """更新进度条"""
-        if hasattr(self.main_window.ui, 'progressBar'):
-            self.main_window.ui.progressBar.setValue(value)
+        if hasattr(self._ui, 'progressBar'):
+            self._ui.progressBar.setValue(value)
     
-    def update_output(self, text):
+    def update_output(self, text: str) -> None:
         """更新输出文本"""
-        if hasattr(self.main_window.ui, 'textEdit_output'):
-            self.main_window.ui.textEdit_output.append(text)
+        if hasattr(self._ui, 'textEdit_output'):
+            self._ui.textEdit_output.append(text)
     
-    def clear_output(self):
+    def clear_output(self) -> None:
         """清空输出文本"""
-        if hasattr(self.main_window.ui, 'textEdit_output'):
-            self.main_window.ui.textEdit_output.clear()
+        if hasattr(self._ui, 'textEdit_output'):
+            self._ui.textEdit_output.clear()
+    
+    def set_status(self, text: str) -> None:
+        """设置状态文本"""
+        if hasattr(self._ui, 'status_label'):
+            self._ui.status_label.setText(text)
