@@ -48,9 +48,15 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     def send_progress_value(value):
         if progress_value_callback:
             progress_value_callback(value)
-    # 获取项目根目录
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    models_dir = os.path.join(root_dir, 'models')
+    # 获取项目根目录（处理打包环境）
+    import sys
+    if hasattr(sys, '_MEIPASS'):
+        # 打包环境
+        models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
+    else:
+        # 开发环境
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        models_dir = os.path.join(root_dir, 'models')
     
     # 确保目录存在
     os.makedirs(models_dir, exist_ok=True)
