@@ -35,7 +35,15 @@ TransformerFaultDiagnoser/
 │   └── mainui_ui.py    # UI生成代码
 ├── utils/              # 工具模块
 │   ├── random_forest.py  # 随机森林训练与预测
-│   └── train_pca.py      # PCA模型训练
+│   ├── train_pca.py      # PCA模型训练
+│   ├── data_processor.py # 数据处理
+│   ├── predictor.py      # 预测器
+│   ├── data_importer.py  # 数据导入
+│   ├── model_manager.py  # 模型管理
+│   ├── table_manager.py  # 表格管理
+│   ├── input_manager.py  # 输入管理
+│   ├── ui_manager.py     # UI管理
+│   └── thread_manager.py # 线程管理
 ├── data/               # 数据目录
 │   └── DGA_data.xlsx  # 油色谱样本数据
 ├── test/               # 测试模块
@@ -49,6 +57,7 @@ TransformerFaultDiagnoser/
 - **数据库**: SQLite3
 - **机器学习**: Scikit-learn (PCA, Random Forest)
 - **数据处理**: Pandas, NumPy
+- **数据读写**: openpyxl
 
 ## 核心模块说明
 
@@ -75,25 +84,66 @@ TransformerFaultDiagnoser/
   - `get_all_tables()`: 获取所有数据表
   - `get_table_data(table_name)`: 获取指定表数据
 
+### utils/data_processor.py
+
+数据处理模块，整合数据导入、处理、训练和预测功能。
+
+- `DataProcessor`: 数据处理器类
+  - `init_database()`: 初始化数据库
+  - `import_data(excel_file, table_name, progress_callback, progress_value_callback)`: 导入数据
+  - `get_all_tables()`: 获取所有表
+  - `get_table_data(table_name)`: 获取表数据
+  - `train_pca(progress_callback, progress_value_callback)`: 训练PCA模型
+  - `train_model(progress_callback, progress_value_callback)`: 训练模型
+  - `predict(input_data, data_type)`: 预测单条数据
+  - `predict_multi(input_data_dict)`: 多类型数据预测
+  - `reload_predictor()`: 重新加载预测器
+
+### utils/predictor.py
+
+预测器模块，加载训练好的模型进行故障预测。
+
+- `Predictor`: 预测器类
+  - `load_models()`: 加载模型
+  - `predict(input_data, data_type)`: 预测单类型数据
+  - `predict_multi(input_data_dict)`: 多类型数据融合预测
+  - `_fuse_predictions(predictions)`: 融合多个预测结果
+  - `get_supported_types()`: 获取支持的输入类型
+  - `has_multi_output_model()`: 检查是否有多输出模型
+  - `has_single_output_model()`: 检查是否有单输出模型
+
 ### utils/random_forest.py
 
 随机森林模块，用于模型训练和故障预测。
 
-- `train_random_forest(db_path, n_estimators, random_state, progress_callback, progress_value_callback)`: 训练随机森林模型
-- `predict_with_random_forest(X)`: 使用随机森林进行预测
+- `train_random_forest(...)`: 训练随机森林模型
+  - 参数: data_source, data_file, db_path, n_estimators, random_state, progress_callback, progress_value_callback
 
 ### utils/train_pca.py
 
 PCA降维模块，用于特征提取和降维。
 
-- `train_pca_model(data_source, data_file, db_path, feature_columns, n_components, progress_callback, progress_value_callback)`: 训练PCA模型
+- `train_pca_model(...)`: 训练PCA模型
+  - 参数: data_source, data_file, db_path, feature_columns, n_components, progress_callback, progress_value_callback
+
+### utils/thread_manager.py
+
+线程管理模块，处理后台任务。
+
+- `WorkerThread`: 后台工作线程类
+  - `run()`: 执行后台任务
+  - `on_progress(message)`: 进度消息回调
+  - `on_progress_value(value)`: 进度值回调
+- `ThreadManager`: 线程管理器类
 
 ### main.py
 
-主程序入口，包含GUI主窗口和后台工作线程。
+主程序入口，包含GUI主窗口。
 
-- `WorkerThread`: 后台工作线程类，用于执行耗时操作
-- `MainWindow`: 主窗口类，提供用户界面
+- `MainWindow`: 主窗口类
+  - 初始化界面组件
+  - 连接信号槽
+  - 管理数据导入、模型训练、故障诊断流程
 
 ## 安装教程
 
@@ -117,27 +167,23 @@ cd transformer-fault-diagnoser
 2. 创建并激活虚拟环境（推荐）：
 ```bash
 python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
 ```
 
-3. 安装依赖包：
-```bash
-pip install -r requirements.txt
-```
+3. 激活虚拟环境：
+   - Windows: `venv\Scripts\activate`
+   - Linux/Mac: `source venv/bin/activate`
 
-如果项目中没有requirements.txt，可手动安装：
+4. 安装依赖包：
 ```bash
 pip install PySide6 pandas numpy scikit-learn openpyxl
 ```
 
-4. 初始化数据库：
+5. 运行主程序：
 ```bash
-# 运行主程序后，数据导入功能会自动创建数据库
 python main.py
 ```
+
+首次运行时，数据导入功能会自动创建数据库。
 
 ## 使用说明
 
@@ -177,8 +223,9 @@ python main.py
 | database/ | 数据库操作，存储样本数据和诊断记录 |
 | models/ | 训练好的机器学习模型 |
 | ui/ | Qt用户界面定义 |
-| utils/ | 核心算法工具（PCA、随机森林） |
+| utils/ | 核心算法工具（PCA、随机森林）及各功能模块 |
 | data/ | 原始数据文件 |
+| test/ | 测试代码 |
 | logs/ | 运行日志 |
 
 ## 参与贡献
