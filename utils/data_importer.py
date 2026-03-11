@@ -32,18 +32,18 @@ class DataImporter:
         # 定义各表的关键列
         self.table_columns = {
             'oil_chromatography': {
-                'required': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2'],
-                'optional': ['fault_type', 'fault_location', '采集时间', '备注'],
+                'required': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'fault_type', 'fault_location'],
+                'optional': [ '采集时间', '备注'],
                 'keywords': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', '氢气', '甲烷', '乙烷', '乙烯', '乙炔']
             },
             'hf_partial_discharge': {
-                'required': ['amplitude', 'frequency', 'phase', 'pulse_count'],
-                'optional': ['fault_type', 'fault_location', '采集时间', '备注'],
+                'required': ['amplitude', 'frequency', 'phase', 'pulse_count', 'fault_type', 'fault_location'],
+                'optional': [ '采集时间', '备注'],
                 'keywords': ['amplitude', 'frequency', 'phase', 'pulse_count', '幅值', '频率', '相位', '脉冲']
             },
             'uhf_partial_discharge': {
-                'required': ['amplitude', 'frequency', 'phase', 'time_difference'],
-                'optional': ['fault_type', 'fault_location', '采集时间', '备注'],
+                'required': ['amplitude', 'frequency', 'phase', 'time_difference', 'fault_type', 'fault_location'],
+                'optional': ['采集时间', '备注'],
                 'keywords': ['amplitude', 'frequency', 'phase', 'time_difference', '幅值', '频率', '相位', '时差']
             }
         }
