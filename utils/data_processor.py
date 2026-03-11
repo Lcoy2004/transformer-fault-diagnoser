@@ -1,11 +1,10 @@
-# utils/data_processor.py
 """
-数据处理器：负责处理数据相关的操作
+数据处理模块
 """
 
 import logging
-import os
-import numpy as np
+from typing import List, Tuple, Dict, Any, Optional, Callable
+import pandas as pd
 from database.db_manager import DatabaseManager
 from utils.train_pca import train_pca_model
 from utils.random_forest import train_random_forest
@@ -15,218 +14,158 @@ from config import notify
 
 logger = logging.getLogger(__name__)
 
+
 class DataProcessor:
     """数据处理器"""
     
     def __init__(self):
-        """初始化数据处理器"""
-        self.db_manager = None
-        self.data_importer = None
-        self.predictor = None
-        self.init_database()
+        self._db: Optional[DatabaseManager] = None
+        self._importer: Optional[DataImporter] = None
+        self._predictor: Optional[Predictor] = None
+        self._init()
     
-    def init_database(self):
-        """初始化数据库"""
+    def _init(self) -> None:
+        """初始化"""
         try:
-            self.db_manager = DatabaseManager()
-            self.data_importer = DataImporter(self.db_manager)
-            self.predictor = Predictor()
-            notify("数据库连接成功")
-            logger.info("数据库连接成功")
+            self._db = DatabaseManager()
+            self._importer = DataImporter(self._db)
+            self._predictor = Predictor()
+            logger.info("数据处理器初始化完成")
         except Exception as e:
-            error_msg = f"数据库初始化失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
+            logger.error(f"初始化失败: {e}")
+            notify(f"初始化失败: {e}")
     
-    def import_data(self, excel_file, table_name=None, progress_callback=None, progress_value_callback=None):
+    def import_data(
+        self,
+        excel_file: str,
+        table_name: Optional[str] = None,
+        progress_callback: Optional[Callable] = None,
+        progress_value_callback: Optional[Callable] = None
+    ) -> int:
         """
         导入数据
         
         Args:
-            excel_file: Excel文件路径
-            table_name: 表名（如果为None，则自动检测）
-            progress_callback: 进度回调函数
-            progress_value_callback: 进度值回调函数
-        
-        Returns:
-            int: 导入的记录数
-        """
-        try:
-            if self.db_manager is None:
-                self.init_database()
+            excel_file: Excel 文件路径
+            table_name: 目标表名（None 则自动检测）
+            progress_callback: 进度回调
+            progress_value_callback: 进度值回调
             
-            # 如果没有指定表名，则自动检测
+        Returns:
+            导入记录数
+        """
+        self._ensure_init()
+        
+        # 自动检测表名
+        if table_name is None:
+            df = pd.read_excel(excel_file)
+            table_name = self._importer.detect_data_type(df)
             if table_name is None:
-                import pandas as pd
-                df = pd.read_excel(excel_file)
-                table_name = self.data_importer.detect_data_type(df)
-                
-                if table_name is None:
-                    error_msg = "无法识别数据类型，请手动指定表名"
-                    notify(error_msg)
-                    logger.error(error_msg)
-                    raise ValueError(error_msg)
-            
-            # 导入数据到指定表
-            result = self.data_importer.import_to_table(
-                excel_file=excel_file,
-                table_name=table_name,
-                progress_callback=progress_callback,
-                progress_value_callback=progress_value_callback
-            )
-            return result
-        except Exception as e:
-            error_msg = f"导入数据失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
-    
-    def get_all_tables(self):
-        """
-        获取所有表
+                raise ValueError("无法识别数据类型，请手动指定表名")
         
-        Returns:
-            list: 表名列表
-        """
-        try:
-            if self.db_manager is None:
-                self.init_database()
-            
-            tables = self.db_manager.get_all_tables()
-            return tables
-        except Exception as e:
-            error_msg = f"获取表列表失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            return []
+        return self._importer.import_to_table(
+            excel_file=excel_file,
+            table_name=table_name,
+            progress_callback=progress_callback,
+            progress_value_callback=progress_value_callback
+        )
     
-    def get_table_data(self, table_name):
+    def get_all_tables(self) -> List[str]:
+        """获取所有表名"""
+        self._ensure_init()
+        return self._db.get_all_tables()
+    
+    def get_table_data(self, table_name: str) -> Tuple[List[tuple], List[str]]:
         """
         获取表数据
         
         Args:
             table_name: 表名
-        
-        Returns:
-            tuple: (data, columns)
-        """
-        try:
-            if self.db_manager is None:
-                self.init_database()
             
-            data, columns = self.db_manager.get_table_data(table_name)
-            return data, columns
-        except Exception as e:
-            error_msg = f"获取表数据失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            return [], []
-    
-    def train_pca(self, progress_callback=None, progress_value_callback=None):
+        Returns:
+            (数据行列表, 列名列表)
         """
-        训练PCA模型
+        self._ensure_init()
+        return self._db.get_table_data(table_name)
+    
+    def train_pca(
+        self,
+        progress_callback: Optional[Callable] = None,
+        progress_value_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
+        """
+        训练 PCA 模型
         
         Args:
-            progress_callback: 进度回调函数
-            progress_value_callback: 进度值回调函数
-        
+            progress_callback: 进度回调
+            progress_value_callback: 进度值回调
+            
         Returns:
-            dict: 训练结果
+            训练结果
         """
-        try:
-            result = train_pca_model(
-                progress_callback=progress_callback,
-                progress_value_callback=progress_value_callback
-            )
-            return result
-        except Exception as e:
-            error_msg = f"训练PCA模型失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
+        return train_pca_model(
+            progress_callback=progress_callback,
+            progress_value_callback=progress_value_callback
+        )
     
-    def train_model(self, progress_callback=None, progress_value_callback=None):
+    def train_model(
+        self,
+        progress_callback: Optional[Callable] = None,
+        progress_value_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
         """
         训练随机森林模型
         
         Args:
-            progress_callback: 进度回调函数
-            progress_value_callback: 进度值回调函数
-        
+            progress_callback: 进度回调
+            progress_value_callback: 进度值回调
+            
         Returns:
-            dict: 训练结果
+            训练结果
         """
-        try:
-            result = train_random_forest(
-                progress_callback=progress_callback,
-                progress_value_callback=progress_value_callback
-            )
-            return result
-        except Exception as e:
-            error_msg = f"训练随机森林模型失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
+        return train_random_forest(
+            progress_callback=progress_callback,
+            progress_value_callback=progress_value_callback
+        )
     
-    def predict(self, input_data, data_type='DGA'):
+    def predict(self, input_data: List[float], data_type: str = 'DGA') -> Tuple[Any, Any]:
         """
-        预测故障（单类型数据）
+        预测故障
         
         Args:
             input_data: 输入数据
-            data_type: 数据类型 ('DGA', 'HF', 'UHF')
-        
-        Returns:
-            tuple: (故障类型, 故障位置)
-        """
-        try:
-            if self.predictor is None:
-                self.predictor = Predictor()
+            data_type: 数据类型 (DGA/HF/UHF)
             
-            fault_type, fault_location = self.predictor.predict(input_data, data_type)
-            return fault_type, fault_location
-        except Exception as e:
-            error_msg = f"预测失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
+        Returns:
+            (故障类型, 故障位置)
+        """
+        self._ensure_predictor()
+        return self._predictor.predict(input_data, data_type)
     
-    def predict_multi(self, input_data_dict):
+    def predict_multi(self, input_data_dict: Dict[str, List[float]]) -> Dict[str, Any]:
         """
         多类型数据融合预测
         
         Args:
-            input_data_dict: 输入数据字典，格式为 {data_type: [values]}
-                            例如: {'DGA': [33.0, 29.0, 9.0, 12.0, 0.0], 
-                                   'HF': [1.2, 100.0, 30.0, 5.0]}
-        
-        Returns:
-            dict: 预测结果字典，包含各类型预测结果和融合预测结果
-                  格式: {
-                      'DGA': (fault_type, fault_location),
-                      'HF': (fault_type, fault_location),
-                      'fusion': (fault_type, fault_location, confidence)
-                  }
-        """
-        try:
-            if self.predictor is None:
-                self.predictor = Predictor()
+            input_data_dict: 输入数据字典 {data_type: [values]}
             
-            results = self.predictor.predict_multi(input_data_dict)
-            return results
-        except Exception as e:
-            error_msg = f"多类型数据融合预测失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
+        Returns:
+            预测结果字典
+        """
+        self._ensure_predictor()
+        return self._predictor.predict_multi(input_data_dict)
     
-    def reload_predictor(self):
-        """重新加载预测器模型"""
-        try:
-            self.predictor = Predictor()
-            logger.info("预测器模型重新加载成功")
-        except Exception as e:
-            error_msg = f"预测器模型重新加载失败: {e}"
-            notify(error_msg)
-            logger.error(error_msg)
-            raise
+    def reload_predictor(self) -> None:
+        """重新加载预测器"""
+        self._predictor = Predictor()
+        logger.info("预测器重新加载完成")
+    
+    def _ensure_init(self) -> None:
+        """确保已初始化"""
+        if self._db is None:
+            self._init()
+    
+    def _ensure_predictor(self) -> None:
+        """确保预测器已加载"""
+        if self._predictor is None:
+            self._predictor = Predictor()

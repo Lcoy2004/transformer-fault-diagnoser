@@ -1,12 +1,12 @@
-# utils/model_manager.py
 """
-模型管理器：负责处理模型训练和预测相关的操作
+模型管理模块
 """
 
 import logging
-from PySide6.QtWidgets import QMessageBox
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
+
 
 class ModelManager:
     """模型管理器"""
@@ -17,120 +17,75 @@ class ModelManager:
         
         Args:
             data_processor: 数据处理器
-            ui_manager: UI管理器
+            ui_manager: UI 管理器
             thread_manager: 线程管理器
         """
-        self.data_processor = data_processor
-        self.ui_manager = ui_manager
-        self.thread_manager = thread_manager
+        self._data = data_processor
+        self._ui = ui_manager
+        self._thread = thread_manager
     
-    def train_pca(self):
-        """
-        训练PCA模型
-        """
-        # 清空输出
-        self.ui_manager.clear_output()
-        
-        # 开始训练
-        worker = self.thread_manager.start_task(self.data_processor.train_pca)
-        
-        # 连接信号
-        worker.progress.connect(self.ui_manager.update_output)
-        worker.progress_value.connect(self.ui_manager.update_progress)
-        worker.finished.connect(self.on_pca_finished)
-        worker.error.connect(self.on_error)
-        
-        # 启动线程
-        worker.start()
+    def train_pca(self) -> None:
+        """训练 PCA 模型"""
+        self._start_training(
+            self._data.train_pca,
+            self._on_pca_finished,
+            "PCA 训练完成"
+        )
     
-    def on_pca_finished(self, result):
+    def train_rf(self) -> None:
+        """训练随机森林模型"""
+        self._start_training(
+            self._data.train_model,
+            self._on_rf_finished,
+            "随机森林训练完成"
+        )
+    
+    def _start_training(self, train_func, callback, success_msg: str) -> None:
         """
-        PCA训练完成处理
+        启动训练任务
         
         Args:
-            result: 训练结果
+            train_func: 训练函数
+            callback: 完成回调
+            success_msg: 成功消息
         """
-        self.ui_manager.update_output(f"PCA训练完成，解释方差比: {result['explained_variance_ratio']}")
-        self.ui_manager.update_output(f"模型已保存到: {result['pca_path']}")
-    
-    def train_model(self):
-        """
-        训练随机森林模型
-        """
-        # 清空输出
-        self.ui_manager.clear_output()
+        self._ui.clear_output()
         
-        # 开始训练
-        worker = self.thread_manager.start_task(self.data_processor.train_model)
-        
-        # 连接信号
-        worker.progress.connect(self.ui_manager.update_output)
-        worker.progress_value.connect(self.ui_manager.update_progress)
-        worker.finished.connect(self.on_model_finished)
-        worker.error.connect(self.on_error)
-        
-        # 启动线程
+        worker = self._thread.start(train_func)
+        worker.progress.connect(self._ui.update_output)
+        worker.progress_value.connect(self._ui.update_progress)
+        worker.finished.connect(callback)
+        worker.error.connect(self._on_error)
         worker.start()
     
-    def on_model_finished(self, result):
-        """
-        模型训练完成处理
+    def _on_pca_finished(self, result: Dict[str, Any]) -> None:
+        """PCA 训练完成处理"""
+        self._ui.update_output(f"PCA 训练完成")
+        self._ui.update_output(f"解释方差比: {result.get('explained_variance_ratio', 'N/A')}")
+        self._ui.update_output(f"模型路径: {result.get('pca_path', 'N/A')}")
+    
+    def _on_rf_finished(self, result: Dict[str, Any]) -> None:
+        """随机森林训练完成处理"""
+        self._ui.update_output(f"模型训练完成")
+        self._ui.update_output(f"准确率: {result.get('accuracy', 0):.4f}")
         
-        Args:
-            result: 训练结果
-        """
-        self.ui_manager.update_output(f"模型训练完成，准确率: {result['accuracy']:.4f}")
-        
-        # 检查是否有故障类型报告
         if 'fault_type_report' in result:
-            self.ui_manager.update_output(f"故障类型准确率: {result['fault_type_report']}")
-        
-        # 检查是否有故障位置报告
+            self._ui.update_output(f"故障类型准确率: {result['fault_type_report']}")
         if 'fault_location_report' in result:
-            self.ui_manager.update_output(f"故障位置准确率: {result['fault_location_report']}")
+            self._ui.update_output(f"故障位置准确率: {result['fault_location_report']}")
         
-        # 显示模型保存路径
-        if 'model_path' in result:
-            self.ui_manager.update_output(f"模型已保存到: {result['model_path']}")
+        model_type = "多输出" if result.get('is_multi_output') else "单输出"
+        self._ui.update_output(f"模型类型: {model_type}")
+        self._ui.update_output(f"模型路径: {result.get('model_path', 'N/A')}")
         
-        # 显示模型类型信息
-        if result.get('is_multi_output', False):
-            self.ui_manager.update_output("模型类型: 多输出模型（故障类型+位置）")
-        else:
-            self.ui_manager.update_output("模型类型: 单输出模型（仅故障类型）")
-        
-        # 重新加载预测器模型
+        # 重新加载预测器
         try:
-            self.data_processor.reload_predictor()
-            self.ui_manager.update_output("预测器模型已重新加载")
+            self._data.reload_predictor()
+            self._ui.update_output("预测器已重新加载")
         except Exception as e:
             logger.error(f"重新加载预测器失败: {e}")
-            self.ui_manager.update_output(f"警告: 重新加载预测器失败: {e}")
     
-    def predict(self, input_data):
-        """
-        预测故障
-        
-        Args:
-            input_data: 输入数据
-            
-        Returns:
-            tuple: (fault_type, fault_location) 故障类型和位置
-        """
-        try:
-            # 开始预测
-            fault_type, fault_location = self.data_processor.predict(input_data)
-            return fault_type, fault_location
-        except Exception as e:
-            error_msg = f"预测失败: {str(e)}"
-            logger.error(error_msg)
-            raise
-    
-    def on_error(self, error_msg):
-        """
-        错误处理
-        
-        Args:
-            error_msg: 错误信息
-        """
+    def _on_error(self, error_msg: str) -> None:
+        """错误处理"""
         logger.error(error_msg)
+        self._ui.update_output(f"错误: {error_msg}")
