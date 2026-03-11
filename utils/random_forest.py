@@ -184,8 +184,15 @@ def train_random_forest(
             send_notification(f"综合准确率: {overall_accuracy:.4f}")
             
             # 6. 保存模型
-            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            models_dir = os.path.join(root_dir, 'models')
+            import sys
+            # 获取项目根目录（处理打包环境）
+            if hasattr(sys, '_MEIPASS'):
+                # 打包环境
+                models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
+            else:
+                # 开发环境
+                root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                models_dir = os.path.join(root_dir, 'models')
             os.makedirs(models_dir, exist_ok=True)
             
             model_path = os.path.join(models_dir, 'random_forest_multioutput_model.pkl')
@@ -259,8 +266,15 @@ def train_random_forest(
             send_notification(f"故障类型准确率: {accuracy:.4f}")
             
             # 6. 保存模型
-            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            models_dir = os.path.join(root_dir, 'models')
+            import sys
+            # 获取项目根目录（处理打包环境）
+            if hasattr(sys, '_MEIPASS'):
+                # 打包环境
+                models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
+            else:
+                # 开发环境
+                root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                models_dir = os.path.join(root_dir, 'models')
             os.makedirs(models_dir, exist_ok=True)
             
             model_path = os.path.join(models_dir, 'random_forest_single_output_model.pkl')
