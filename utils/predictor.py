@@ -1,4 +1,3 @@
-# utils/predictor.py
 """
 预测器：负责处理不同类型数据的预测
 
@@ -9,9 +8,11 @@
 """
 
 import logging
+import os
+import sys
+
 import numpy as np
 import joblib
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,6 @@ class Predictor:
     
     def load_models(self):
         """加载模型"""
-        import sys
         # 获取项目根目录（处理打包环境）
         if hasattr(sys, '_MEIPASS'):
             models_dir = os.path.join(os.path.dirname(sys.executable), 'models')

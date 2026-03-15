@@ -1,9 +1,12 @@
-# utils/data_importer.py
 """
 数据导入器：负责识别数据类型和导入数据到对应表
 """
+
 import logging
+import os
+
 import pandas as pd
+
 from database.db_manager import DatabaseManager
 from config import notify
 
@@ -335,8 +338,6 @@ class DataImporter:
         cursor = conn.cursor()
         
         try:
-            # 使用文件名而不是完整路径，避免路径变化导致重复导入
-            import os
             file_name = os.path.basename(source_file)
             
             # 检查是否已存在相同文件名的数据

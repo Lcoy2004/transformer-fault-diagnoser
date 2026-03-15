@@ -1,16 +1,15 @@
 """
 图表模块 - 用于显示数据库中各表的原始数据图表
-使用Qt Charts 2D图表，避免3D渲染性能问题
 """
 
 import logging
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import List, Tuple
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, 
-    QLabel, QStackedWidget, QProgressDialog, QSplitter
+    QLabel, QStackedWidget
 )
-from PySide6.QtCore import Qt, QSize, QPointF
+from PySide6.QtCore import Qt, QPointF
 from PySide6.QtCharts import QChartView, QChart, QLineSeries, QValueAxis
 from PySide6.QtGui import QColor, QPen, QPainter
 
@@ -63,16 +62,6 @@ class ChartManager:
             'type': 'auto',
             'description': '局部放电通道4特征数据'
         }
-    }
-    
-    FAULT_COLORS = {
-        '正常': (0.2, 0.8, 0.2, 1.0),
-        '过热': (1.0, 0.5, 0.0, 1.0),
-        '放电': (0.8, 0.2, 0.2, 1.0),
-        '电弧放电': (1.0, 0.0, 0.0, 1.0),
-        '火花放电': (1.0, 0.5, 0.0, 1.0),
-        '局部放电': (0.8, 0.4, 0.8, 1.0),
-        'default': (0.3, 0.3, 0.8, 1.0)
     }
     
     def __init__(self, db_path: str = 'database/fault_data.db'):
@@ -131,16 +120,6 @@ class ChartManager:
         logger.info(f"[加载] {table_name}: {len(X)} 样本, {len(valid_cols)} 特征")
         
         return self._current_data
-    
-    def get_colors_for_labels(self, labels: np.ndarray) -> np.ndarray:
-        """根据标签获取颜色"""
-        colors = np.zeros((len(labels), 4))
-        
-        for i, label in enumerate(labels):
-            color = self.FAULT_COLORS.get(label, self.FAULT_COLORS['default'])
-            colors[i] = color
-        
-        return colors
 
 
 class ChartContainer(QWidget):
