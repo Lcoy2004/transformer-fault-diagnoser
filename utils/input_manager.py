@@ -9,19 +9,10 @@ from PySide6.QtCore import Qt
 
 logger = logging.getLogger(__name__)
 
-# 输入类型配置
 INPUT_CONFIGS: Dict[str, Dict] = {
     "DGA数据": {
         'columns': ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2'],
         'type': 'DGA'
-    },
-    "HF局部放电": {
-        'columns': ['amplitude', 'frequency', 'phase', 'pulse_count'],
-        'type': 'HF'
-    },
-    "UHF局部放电": {
-        'columns': ['amplitude', 'frequency', 'phase', 'time_difference'],
-        'type': 'UHF'
     }
 }
 

@@ -60,9 +60,28 @@ class ModelManager:
     
     def _on_pca_finished(self, result: Dict[str, Any]) -> None:
         """PCA 训练完成处理"""
-        self._ui.update_output(f"PCA 训练完成")
-        self._ui.update_output(f"解释方差比: {result.get('explained_variance_ratio', 'N/A')}")
-        self._ui.update_output(f"模型路径: {result.get('pca_path', 'N/A')}")
+        self._ui.update_output("=" * 50)
+        self._ui.update_output("PCA 训练完成")
+        self._ui.update_output("=" * 50)
+        
+        all_pcas = result.get('all_pcas', {})
+        all_scalers = result.get('all_scalers', {})
+        processed_data = result.get('processed_data', [])
+        
+        for source, pca in all_pcas.items():
+            explained_variance = pca.explained_variance_ratio_
+            cumulative_variance = explained_variance.cumsum()
+            n_components = len(explained_variance)
+            
+            self._ui.update_output(f"\n【{source} 模型】")
+            self._ui.update_output(f"  主成分数量: {n_components}")
+            self._ui.update_output(f"  累计方差贡献率: {cumulative_variance[-1]:.4f}")
+            self._ui.update_output(f"  各成分方差贡献: {[f'{v:.4f}' for v in explained_variance]}")
+        
+        self._ui.update_output("\n" + "=" * 50)
+        self._ui.update_output(f"共训练 {len(all_pcas)} 个PCA模型")
+        self._ui.update_output(f"共处理 {sum(len(d['X']) for d in processed_data)} 个样本")
+        self._ui.update_output("=" * 50)
     
     def _on_rf_finished(self, result: Dict[str, Any]) -> None:
         """随机森林训练完成处理"""

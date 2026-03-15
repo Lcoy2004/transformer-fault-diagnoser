@@ -1,17 +1,20 @@
-# utils/random_forest.py
 """
-随机森林模型训练
+随机森林模型训练模块
 """
 
 import logging
 import os
+import sys
+import json
+
 import numpy as np
 import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
+
 from config import notify
 
 logger = logging.getLogger(__name__)
@@ -210,7 +213,6 @@ def _train_single_model(df, model_name, n_estimators, random_state,
         dict: 训练结果
     """
     import json
-    import sys
     
     # 解析主成分数据
     X = []

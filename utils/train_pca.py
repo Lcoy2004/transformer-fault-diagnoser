@@ -1,41 +1,46 @@
-import pandas as pd
-import numpy as np
-import os
+"""
+PCA降维训练模块
+"""
+
 import logging
+import os
+import sys
+import json
+import joblib
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-import joblib
-import sys
 
-# 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.db_manager import DatabaseManager
 from config import notify
+
 logger = logging.getLogger(__name__)
 
-def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='database/fault_data.db', feature_columns=None, n_components=0.95, progress_callback=None, progress_value_callback=None):
+
+def train_pca_model(
+    data_source='database',
+    data_file='DGA_data.xlsx',
+    db_path='database/fault_data.db',
+    progress_callback=None,
+    progress_value_callback=None
+):
     """
     训练PCA模型并保存
     
     Args:
-        data_source (str): 数据来源，可选 'database' 或 'excel'
-        data_file (str): 数据文件名，当 data_source 为 'excel' 时使用
-        db_path (str): 数据库文件路径，当 data_source 为 'database' 时使用
-        feature_columns (list): 特征列名列表，默认使用 ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
-        n_components (float or int): PCA 组件数量，默认保留95%方差
-        progress_callback (callable): 进度回调函数，用于发送进度通知
-        progress_value_callback (callable): 进度值回调函数，用于发送进度百分比
+        data_source: 数据来源 ('database' 或 'excel')
+        data_file: 数据文件名
+        db_path: 数据库文件路径
+        progress_callback: 进度回调函数
+        progress_value_callback: 进度值回调函数
     
     Returns:
-        dict: 包含以下键的字典:
-            - pca_model: PCA 模型对象，用于 transform 新数据
-            - scaler: StandardScaler 对象，用于 inverse_transform
-            - n_components: 降维后的主成分数量
-            - explained_variance_ratio: 各主成分的方差贡献率列表
-            - cumulative_variance: 累计方差贡献率列表
-            - pca_path: PCA 模型保存路径
-            - scaler_path: 标准化模型保存路径
+        dict: {'all_scalers': {...}, 'all_pcas': {...}, 'processed_data': [...]}
     """
     # 定义通知函数
     def send_notification(message):
@@ -49,7 +54,6 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         if progress_value_callback:
             progress_value_callback(value)
     # 获取项目根目录（处理打包环境）
-    import sys
     if hasattr(sys, '_MEIPASS'):
         # 打包环境
         models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
@@ -197,10 +201,6 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     send_notification("开始数据融合处理...")
     send_progress_value(20)
     
-    import numpy as np
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.decomposition import PCA
-    
     # 存储每个数据源的处理结果
     processed_data = []
     all_scalers = {}
@@ -312,10 +312,6 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        import json
-        from datetime import datetime
-        
-        # 生成模型ID（基于时间戳）
         model_id = f"PCA_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # 保存各数据源的PCA结果到对应的表

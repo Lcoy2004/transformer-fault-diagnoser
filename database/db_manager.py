@@ -3,10 +3,9 @@
 """
 
 import logging
-import os
 import sqlite3
 from pathlib import Path
-from typing import List, Tuple, Optional, Any
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -69,28 +68,6 @@ CREATE_TABLE_SQL = {
     """,
     'fusion_features_pd_ch4': """
         CREATE TABLE IF NOT EXISTS fusion_features_pd_ch4 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features_combined': """
-        CREATE TABLE IF NOT EXISTS fusion_features_combined (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features': """
-        CREATE TABLE IF NOT EXISTS fusion_features (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sample_id TEXT NOT NULL,
             model_id TEXT,
