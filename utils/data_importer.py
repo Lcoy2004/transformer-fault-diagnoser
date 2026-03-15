@@ -2,7 +2,6 @@
 """
 数据导入器：负责识别数据类型和导入数据到对应表
 """
-
 import logging
 import pandas as pd
 from database.db_manager import DatabaseManager
@@ -25,8 +24,10 @@ class DataImporter:
         # 定义表类型映射
         self.table_types = {
             'oil_chromatography': 'DGA',
-            'hf_partial_discharge': 'HF',
-            'uhf_partial_discharge': 'UHF'
+            'pd_channel_1': 'PD_CH1',
+            'pd_channel_2': 'PD_CH2',
+            'pd_channel_3': 'PD_CH3',
+            'pd_channel_4': 'PD_CH4'
         }
         
         # 定义各表的关键列
@@ -36,15 +37,37 @@ class DataImporter:
                 'optional': ['sample_time'],
                 'keywords': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', '氢气', '甲烷', '乙烷', '乙烯', '乙炔']
             },
-            'hf_partial_discharge': {
-                'required': ['amplitude', 'frequency', 'phase', 'pulse_count', 'fault_type', 'fault_location'],
-                'optional': ['sample_time'],
-                'keywords': ['amplitude', 'frequency', 'phase', 'pulse_count', '幅值', '频率', '相位', '脉冲']
+            'pd_channel_1': {
+                'required': ['ch1_band1_energy', 'ch1_band2_energy', 'ch1_band3_energy', 'ch1_band4_energy', 
+                            'ch1_kurtosis', 'ch1_main_amp', 'ch1_main_freq', 'ch1_mean', 
+                            'ch1_peak', 'ch1_pulse_width', 'ch1_skewness', 'ch1_var', 
+                            'fault_type', 'fault_location'],
+                'optional': ['filename', 'sample_time'],
+                'keywords': ['ch1_', 'channel_1', '通道1']
             },
-            'uhf_partial_discharge': {
-                'required': ['amplitude', 'frequency', 'phase', 'time_difference', 'fault_type', 'fault_location'],
-                'optional': ['sample_time'],
-                'keywords': ['amplitude', 'frequency', 'phase', 'time_difference', '幅值', '频率', '相位', '时差']
+            'pd_channel_2': {
+                'required': ['ch2_band1_energy', 'ch2_band2_energy', 'ch2_band3_energy', 'ch2_band4_energy', 
+                            'ch2_kurtosis', 'ch2_main_amp', 'ch2_main_freq', 'ch2_mean', 
+                            'ch2_peak', 'ch2_pulse_width', 'ch2_skewness', 'ch2_var', 
+                            'fault_type', 'fault_location'],
+                'optional': ['filename', 'sample_time'],
+                'keywords': ['ch2_', 'channel_2', '通道2']
+            },
+            'pd_channel_3': {
+                'required': ['ch3_band1_energy', 'ch3_band2_energy', 'ch3_band3_energy', 'ch3_band4_energy', 
+                            'ch3_kurtosis', 'ch3_main_amp', 'ch3_main_freq', 'ch3_mean', 
+                            'ch3_peak', 'ch3_pulse_width', 'ch3_skewness', 'ch3_var', 
+                            'fault_type', 'fault_location'],
+                'optional': ['filename', 'sample_time'],
+                'keywords': ['ch3_', 'channel_3', '通道3']
+            },
+            'pd_channel_4': {
+                'required': ['ch4_band1_energy', 'ch4_band2_energy', 'ch4_band3_energy', 'ch4_band4_energy', 
+                            'ch4_kurtosis', 'ch4_main_amp', 'ch4_main_freq', 'ch4_mean', 
+                            'ch4_peak', 'ch4_pulse_width', 'ch4_skewness', 'ch4_var', 
+                            'fault_type', 'fault_location'],
+                'optional': ['filename', 'sample_time'],
+                'keywords': ['ch4_', 'channel_4', '通道4']
             }
         }
         
@@ -57,6 +80,31 @@ class DataImporter:
             '采样时间': 'sample_time',
             '时间': 'sample_time'
         }
+        
+        # 定义标签映射（统一分类体系）
+        self.label_mapping = {
+            # DGA原始标签映射到统一类别
+            'DGA': {
+                '正常': '正常',
+                '中低温过热': '过热',
+                '高温过热': '过热',
+                '局部放电': '放电',
+                '低能放电': '放电',
+                '高能放电': '放电',
+                '火花放电': '放电',
+                '电弧放电': '放电'
+            },
+            # 局放原始标签映射到统一类别
+            'PD': {
+                '尖端放电': '放电',
+                '悬浮放电': '放电',
+                '沿面放电': '放电',
+                '气隙放电': '放电'
+            }
+        }
+        
+        # 局放细分类别（用于DGA预测为放电时的细化）
+        self.pd_fine_labels = ['尖端放电', '悬浮放电', '沿面放电', '气隙放电']
     
     def detect_data_type(self, df):
         """
@@ -66,17 +114,40 @@ class DataImporter:
             df: DataFrame对象
         
         Returns:
-            str: 数据类型（'DGA', 'HF', 'UHF' 或 None）
+            str: 数据类型（'DGA', 'HF', 'UHF', 'PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4' 或 None）
         """
         columns = [col.lower() for col in df.columns]
         
+        # 首先检查是否是局部放电数据（包含多个通道）
+        pd_channel_columns = ['ch1_', 'ch2_', 'ch3_', 'ch4_']
+        pd_channel_count = sum(1 for col in columns if any(channel in col for channel in pd_channel_columns))
+        
+        if pd_channel_count >= 12:  # 至少有12个通道相关列（每个通道3个特征）
+            logger.info(f"检测到局部放电数据，包含 {pd_channel_count} 个通道相关列")
+            return 'pd_channel_1'  # 返回任意一个通道表，后续会处理所有通道
+        
+        # 存储所有表的匹配情况
+        match_results = []
+        
         for table_name, table_info in self.table_columns.items():
+            # 跳过局部放电通道表，因为已经单独处理
+            if table_name.startswith('pd_channel_'):
+                continue
+                
             keywords = table_info['keywords']
             match_count = sum(1 for col in columns if any(keyword in col for keyword in keywords))
+            match_results.append((table_name, match_count))
+        
+        # 按匹配数量排序，选择匹配最多的表
+        match_results.sort(key=lambda x: x[1], reverse=True)
+        
+        # 找到匹配数量最多的表
+        if match_results:
+            best_match, best_match_count = match_results[0]
             
-            if match_count >= 3:  # 至少匹配3个关键词
-                logger.info(f"检测到数据类型: {self.table_types[table_name]}, 匹配表: {table_name}")
-                return table_name
+            if best_match_count >= 3:  # 至少匹配3个关键词
+                logger.info(f"检测到数据类型: {self.table_types[best_match]}, 匹配表: {best_match}, 匹配关键词数: {best_match_count}")
+                return best_match
         
         logger.warning("无法识别数据类型")
         return None
@@ -166,27 +237,54 @@ class DataImporter:
             df.columns = [self._map_column_name(col.strip()) for col in df.columns]
             logger.info(f"标准化列名: {list(df.columns)}")
             
-            # 验证列
-            is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)
-            
-            if not is_valid:
-                error_msg = f"缺少必要的列: {', '.join(missing_columns)}"
-                logger.error(error_msg)
-                send_notification(error_msg)
-                raise ValueError(error_msg)
-            
-            logger.info(f"找到必要的列: {found_columns}")
-            send_notification(f"找到必要的列: {found_columns}")
-            send_progress_value(30)
-            
-            # 导入数据
-            imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
-            
-            send_notification(f"成功导入 {imported_count} 条记录到表 {table_name}")
-            send_progress_value(100)
-            
-            logger.info(f"导入完成: {imported_count} 条记录")
-            return imported_count
+            # 检查是否是局部放电数据（包含多个通道）
+            if table_name in ['pd_channel_1', 'pd_channel_2', 'pd_channel_3', 'pd_channel_4']:
+                # 对于局部放电数据，需要分别导入到四个通道表
+                total_imported = 0
+                
+                # 导入到四个通道表
+                for channel in range(1, 5):
+                    channel_table = f'pd_channel_{channel}'
+                    
+                    # 验证该通道的列
+                    is_valid, missing_columns, found_columns = self.validate_columns(df, channel_table)
+                    
+                    if is_valid:
+                        # 导入数据到当前通道表
+                        imported_count = self._import_data_to_db(df, channel_table, excel_file, progress_callback, progress_value_callback)
+                        total_imported += imported_count
+                        logger.info(f"成功导入 {imported_count} 条记录到表 {channel_table}")
+                        send_notification(f"成功导入 {imported_count} 条记录到表 {channel_table}")
+                    else:
+                        logger.warning(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
+                        send_notification(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
+                
+                send_progress_value(100)
+                send_notification(f"局部放电数据导入完成，共导入 {total_imported} 条记录")
+                return total_imported
+            else:
+                # 普通表的导入逻辑
+                # 验证列
+                is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)
+                
+                if not is_valid:
+                    error_msg = f"缺少必要的列: {', '.join(missing_columns)}"
+                    logger.error(error_msg)
+                    send_notification(error_msg)
+                    raise ValueError(error_msg)
+                
+                logger.info(f"找到必要的列: {found_columns}")
+                send_notification(f"找到必要的列: {found_columns}")
+                send_progress_value(30)
+                
+                # 导入数据
+                imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
+                
+                send_notification(f"成功导入 {imported_count} 条记录到表 {table_name}")
+                send_progress_value(100)
+                
+                logger.info(f"导入完成: {imported_count} 条记录")
+                return imported_count
             
         except Exception as e:
             error_msg = f"导入数据到表 {table_name} 失败: {e}"
@@ -275,6 +373,16 @@ class DataImporter:
                     for col in df.columns:
                         if req_col in col:
                             value = row.get(col, None)
+                            # 处理故障类型标签映射
+                            if req_col == 'fault_type' and value is not None:
+                                # 确定数据源类型
+                                source_type = self.table_types[table_name]
+                                if source_type == 'DGA':
+                                    # DGA数据映射
+                                    value = self.label_mapping['DGA'].get(str(value), value)
+                                else:
+                                    # 局放数据映射
+                                    value = self.label_mapping['PD'].get(str(value), value)
                             break
                     params.append(value)
                 

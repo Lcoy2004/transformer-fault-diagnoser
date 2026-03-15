@@ -39,6 +39,34 @@ class MultiInputManager:
                 'columns': ['amplitude', 'frequency', 'phase', 'time_difference'],
                 'label': 'UHF局部放电 (超高频)',
                 'enabled': False
+            },
+            "PD_CH1": {
+                'columns': ['ch1_band1_energy', 'ch1_band2_energy', 'ch1_band3_energy', 'ch1_band4_energy', 
+                            'ch1_kurtosis', 'ch1_main_amp', 'ch1_main_freq', 'ch1_mean', 
+                            'ch1_peak', 'ch1_pulse_width', 'ch1_skewness', 'ch1_var'],
+                'label': '局部放电 (通道1)',
+                'enabled': False
+            },
+            "PD_CH2": {
+                'columns': ['ch2_band1_energy', 'ch2_band2_energy', 'ch2_band3_energy', 'ch2_band4_energy', 
+                            'ch2_kurtosis', 'ch2_main_amp', 'ch2_main_freq', 'ch2_mean', 
+                            'ch2_peak', 'ch2_pulse_width', 'ch2_skewness', 'ch2_var'],
+                'label': '局部放电 (通道2)',
+                'enabled': False
+            },
+            "PD_CH3": {
+                'columns': ['ch3_band1_energy', 'ch3_band2_energy', 'ch3_band3_energy', 'ch3_band4_energy', 
+                            'ch3_kurtosis', 'ch3_main_amp', 'ch3_main_freq', 'ch3_mean', 
+                            'ch3_peak', 'ch3_pulse_width', 'ch3_skewness', 'ch3_var'],
+                'label': '局部放电 (通道3)',
+                'enabled': False
+            },
+            "PD_CH4": {
+                'columns': ['ch4_band1_energy', 'ch4_band2_energy', 'ch4_band3_energy', 'ch4_band4_energy', 
+                            'ch4_kurtosis', 'ch4_main_amp', 'ch4_main_freq', 'ch4_mean', 
+                            'ch4_peak', 'ch4_pulse_width', 'ch4_skewness', 'ch4_var'],
+                'label': '局部放电 (通道4)',
+                'enabled': False
             }
         }
         
@@ -46,7 +74,11 @@ class MultiInputManager:
         self.input_data = {
             "DGA": None,
             "HF": None,
-            "UHF": None
+            "UHF": None,
+            "PD_CH1": None,
+            "PD_CH2": None,
+            "PD_CH3": None,
+            "PD_CH4": None
         }
         
         # 存储复选框状态

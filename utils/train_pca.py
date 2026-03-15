@@ -79,20 +79,50 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
                     'features': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2'],
                     'source': 'DGA'
                 },
-                'hf_partial_discharge': {
-                    'query': "SELECT amplitude, frequency, phase, pulse_count, fault_type, fault_location FROM hf_partial_discharge",
-                    'features': ['amplitude', 'frequency', 'phase', 'pulse_count'],
-                    'source': 'HF'
+                'pd_channel_1': {
+                    'query': '''SELECT ch1_band1_energy, ch1_band2_energy, ch1_band3_energy, ch1_band4_energy, 
+                              ch1_kurtosis, ch1_main_amp, ch1_main_freq, ch1_mean, 
+                              ch1_peak, ch1_pulse_width, ch1_skewness, ch1_var, 
+                              fault_type, fault_location FROM pd_channel_1''',
+                    'features': ['ch1_band1_energy', 'ch1_band2_energy', 'ch1_band3_energy', 'ch1_band4_energy', 
+                                'ch1_kurtosis', 'ch1_main_amp', 'ch1_main_freq', 'ch1_mean', 
+                                'ch1_peak', 'ch1_pulse_width', 'ch1_skewness', 'ch1_var'],
+                    'source': 'PD_CH1'
                 },
-                'uhf_partial_discharge': {
-                    'query': "SELECT amplitude, frequency, phase, time_difference, fault_type, fault_location FROM uhf_partial_discharge",
-                    'features': ['amplitude', 'frequency', 'phase', 'time_difference'],
-                    'source': 'UHF'
+                'pd_channel_2': {
+                    'query': '''SELECT ch2_band1_energy, ch2_band2_energy, ch2_band3_energy, ch2_band4_energy, 
+                              ch2_kurtosis, ch2_main_amp, ch2_main_freq, ch2_mean, 
+                              ch2_peak, ch2_pulse_width, ch2_skewness, ch2_var, 
+                              fault_type, fault_location FROM pd_channel_2''',
+                    'features': ['ch2_band1_energy', 'ch2_band2_energy', 'ch2_band3_energy', 'ch2_band4_energy', 
+                                'ch2_kurtosis', 'ch2_main_amp', 'ch2_main_freq', 'ch2_mean', 
+                                'ch2_peak', 'ch2_pulse_width', 'ch2_skewness', 'ch2_var'],
+                    'source': 'PD_CH2'
+                },
+                'pd_channel_3': {
+                    'query': '''SELECT ch3_band1_energy, ch3_band2_energy, ch3_band3_energy, ch3_band4_energy, 
+                              ch3_kurtosis, ch3_main_amp, ch3_main_freq, ch3_mean, 
+                              ch3_peak, ch3_pulse_width, ch3_skewness, ch3_var, 
+                              fault_type, fault_location FROM pd_channel_3''',
+                    'features': ['ch3_band1_energy', 'ch3_band2_energy', 'ch3_band3_energy', 'ch3_band4_energy', 
+                                'ch3_kurtosis', 'ch3_main_amp', 'ch3_main_freq', 'ch3_mean', 
+                                'ch3_peak', 'ch3_pulse_width', 'ch3_skewness', 'ch3_var'],
+                    'source': 'PD_CH3'
+                },
+                'pd_channel_4': {
+                    'query': '''SELECT ch4_band1_energy, ch4_band2_energy, ch4_band3_energy, ch4_band4_energy, 
+                              ch4_kurtosis, ch4_main_amp, ch4_main_freq, ch4_mean, 
+                              ch4_peak, ch4_pulse_width, ch4_skewness, ch4_var, 
+                              fault_type, fault_location FROM pd_channel_4''',
+                    'features': ['ch4_band1_energy', 'ch4_band2_energy', 'ch4_band3_energy', 'ch4_band4_energy', 
+                                'ch4_kurtosis', 'ch4_main_amp', 'ch4_main_freq', 'ch4_mean', 
+                                'ch4_peak', 'ch4_pulse_width', 'ch4_skewness', 'ch4_var'],
+                    'source': 'PD_CH4'
                 }
             }
             
             # 读取所有可用的表数据
-            dfs = []
+            table_data = {}
             for table_name, config in table_configs.items():
                 try:
                     # 检查表是否存在
@@ -102,8 +132,11 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
                         # 表存在，读取数据
                         df_table = pd.read_sql_query(config['query'], conn)
                         if not df_table.empty:
-                            df_table['source'] = config['source']
-                            dfs.append(df_table)
+                            table_data[table_name] = {
+                                'data': df_table,
+                                'features': config['features'],
+                                'source': config['source']
+                            }
                             logger.info(f"成功读取表 {table_name}，形状: {df_table.shape}")
                             send_notification(f"成功读取表 {table_name}，形状: {df_table.shape}")
                         else:
@@ -118,16 +151,12 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             
             conn.close()
             
-            if not dfs:
+            if not table_data:
                 error_msg = "没有找到有效的数据表"
                 logger.error(error_msg)
                 send_notification(error_msg)
                 raise ValueError(error_msg)
             
-            # 合并所有数据
-            df = pd.concat(dfs, ignore_index=True)
-            logger.info(f"成功合并所有表数据，形状: {df.shape}")
-            send_notification(f"成功合并所有表数据，形状: {df.shape}")
             logger.info(f"数据库路径: {db_path}")
         else:
             # 从Excel文件读取数据
@@ -138,97 +167,142 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
             df = pd.read_excel(data_path)
             logger.info(f"成功读取数据文件: {data_path}")
             send_notification(f"成功读取数据文件: {data_file}")
+            
+            # 处理Excel数据
+            table_data = {}
+            # 检查是否包含DGA数据
+            if 'h2' in df.columns and 'ch4' in df.columns:
+                table_data['oil_chromatography'] = {
+                    'data': df,
+                    'features': ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2'],
+                    'source': 'DGA'
+                }
+            # 检查是否包含局部放电数据
+            for i in range(1, 5):
+                if f'ch{i}_band1_energy' in df.columns:
+                    table_data[f'pd_channel_{i}'] = {
+                        'data': df,
+                        'features': [f'ch{i}_band1_energy', f'ch{i}_band2_energy', f'ch{i}_band3_energy', f'ch{i}_band4_energy', 
+                                   f'ch{i}_kurtosis', f'ch{i}_main_amp', f'ch{i}_main_freq', f'ch{i}_mean', 
+                                   f'ch{i}_peak', f'ch{i}_pulse_width', f'ch{i}_skewness', f'ch{i}_var'],
+                        'source': f'PD_CH{i}'
+                    }
     except Exception as e:
         error_msg = f"读取数据失败: {e}"
         logger.error(error_msg)
         send_notification(error_msg)
         raise
     
-    # 根据数据来源选择特征列
-    if feature_columns is None:
-        # 检查数据框的列名，自动选择特征列
-        if 'h2' in df.columns and 'ch4' in df.columns:
-            # DGA数据
-            feature_columns = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2']
-        elif 'amplitude' in df.columns and 'frequency' in df.columns and 'pulse_count' in df.columns:
-            # HF局部放电数据
-            feature_columns = ['amplitude', 'frequency', 'phase', 'pulse_count']
-        elif 'amplitude' in df.columns and 'frequency' in df.columns and 'time_difference' in df.columns:
-            # UHF局部放电数据
-            feature_columns = ['amplitude', 'frequency', 'phase', 'time_difference']
-        else:
-            # 尝试从所有可能的特征列中选择
-            possible_features = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'amplitude', 'frequency', 'phase', 'pulse_count', 'time_difference']
-            feature_columns = [col for col in possible_features if col in df.columns]
-            if not feature_columns:
-                error_msg = "无法识别数据类型，没有找到有效的特征列"
-                logger.error(error_msg)
-                send_notification(error_msg)
-                raise ValueError(error_msg)
+    # 数据融合处理
+    send_notification("开始数据融合处理...")
+    send_progress_value(20)
     
-    # 提取特征
-    try:
-        X = df[feature_columns].values
-        logger.info(f"提取特征: {feature_columns}")
-        send_notification(f"提取特征: {feature_columns}")
-        send_progress_value(20)
-        logger.info(f"原始数据形状: {X.shape}")
-        send_notification(f"原始数据形状: {X.shape}")
-    except KeyError as e:
-        # 尝试大小写转换
-        adjusted_columns = []
-        for col in feature_columns:
-            if col in df.columns:
-                adjusted_columns.append(col)
-            elif col.lower() in df.columns:
-                adjusted_columns.append(col.lower())
-            elif col.upper() in df.columns:
-                adjusted_columns.append(col.upper())
-            else:
-                error_msg = f"列 {col} 不存在于数据中"
-                logger.error(error_msg)
-                send_notification(error_msg)
-                raise
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+    
+    # 存储每个数据源的处理结果
+    processed_data = []
+    all_scalers = {}
+    all_pcas = {}
+    
+    # 对每个数据源单独处理
+    for table_name, info in table_data.items():
+        df = info['data']
+        features = info['features']
+        source = info['source']
         
-        X = df[adjusted_columns].values
-        logger.info(f"调整后提取特征: {adjusted_columns}")
-        send_notification(f"调整后提取特征: {adjusted_columns}")
-        send_progress_value(20)
-        logger.info(f"原始数据形状: {X.shape}")
-        send_notification(f"原始数据形状: {X.shape}")
+        # 提取特征
+        try:
+            X = df[features].values
+            logger.info(f"处理 {source} 数据，特征: {features}")
+            
+            # 数据清洗：处理NaN值
+            nan_count = np.isnan(X).sum()
+            if nan_count > 0:
+                logger.warning(f"{source} 数据中包含 {nan_count} 个NaN值，将进行处理")
+                X = np.nan_to_num(X, nan=0.0)
+            
+            # 标准化
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            all_scalers[source] = scaler
+            
+            # PCA降维
+            # 根据数据源类型确定降维后的维度
+            if source == 'DGA':
+                # DGA数据保留全部5个维度
+                n_components = min(5, X_scaled.shape[1])
+            else:
+                # 局部放电数据保留8-10个维度（根据特征数动态调整）
+                n_components = min(10, X_scaled.shape[1])
+            
+            pca = PCA(n_components=n_components)
+            X_pca = pca.fit_transform(X_scaled)
+            all_pcas[source] = pca
+            
+            # 记录方差贡献率
+            explained_variance = pca.explained_variance_ratio_
+            cumulative_variance = explained_variance.cumsum()
+            logger.info(f"{source} PCA维度: {n_components}, 累计方差贡献率: {cumulative_variance[-1]:.4f}")
+            
+            # 存储处理结果
+            processed_data.append({
+                'X': X_pca,
+                'y': df['fault_type'].values if 'fault_type' in df.columns else np.array([None]*len(X_pca)),
+                'locations': df['fault_location'].values if 'fault_location' in df.columns else np.array([None]*len(X_pca)),
+                'source': source
+            })
+            
+            logger.info(f"{source} 数据降维完成，形状: {X_pca.shape}")
+            send_notification(f"{source} 数据降维完成，形状: {X_pca.shape}")
+            
+        except KeyError as e:
+            error_msg = f"处理 {source} 数据失败: {e}"
+            logger.error(error_msg)
+            send_notification(error_msg)
+            continue
     
-    # 标准化
-    send_notification("开始数据标准化...")
-    send_progress_value(30)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    logger.info("数据标准化完成")
-    send_notification("数据标准化完成")
+    if not processed_data:
+        error_msg = "没有有效的数据进行处理"
+        logger.error(error_msg)
+        send_notification(error_msg)
+        raise ValueError(error_msg)
     
-    # PCA 降维
-    send_notification("开始PCA降维...")
-    send_progress_value(40)
-    pca = PCA(n_components=n_components)
-    X_pca = pca.fit_transform(X_scaled)
-    logger.info(f"PCA 降维完成，保留 {X_pca.shape[1]} 个主成分")
-    send_notification(f"PCA 降维完成，保留 {X_pca.shape[1]} 个主成分")
+    # 注意：DGA和PD是不同的样本集，不应该直接拼接特征
+    # 各数据源已独立完成PCA降维，不需要再进行跨数据源的特征融合
+    # 预测时使用决策级融合策略
+    
+    logger.info("=" * 50)
+    logger.info("PCA降维处理完成，各数据源独立保存")
+    logger.info("注意：DGA和PD是不同的样本集，预测时使用决策级融合")
+    logger.info("=" * 50)
+    send_notification("PCA降维处理完成")
     send_progress_value(60)
-    logger.info(f"方差贡献率: {pca.explained_variance_ratio_}")
-    logger.info(f"累计贡献率: {pca.explained_variance_ratio_.cumsum()}")
-    send_notification(f"累计方差贡献率: {pca.explained_variance_ratio_.cumsum()[-1]:.4f}")
     
-    # 保存模型
-    pca_path = os.path.join(models_dir, 'pca_model.pkl')
-    scaler_path = os.path.join(models_dir, 'scaler.pkl')
+    # 汇总各数据源信息
+    for data in processed_data:
+        source = data['source']
+        X = data['X']
+        logger.info(f"{source}: {X.shape[0]} 样本, {X.shape[1]} 维")
     
-    joblib.dump(pca, pca_path)
-    joblib.dump(scaler, scaler_path)
+    # 不再保存融合后的主模型（因为融合逻辑不正确）
+    # 各数据源使用独立的PCA模型
+    
+    # 保存各个数据源的单独模型
+    for source, source_scaler in all_scalers.items():
+        source_scaler_path = os.path.join(models_dir, f'scaler_{source}.pkl')
+        joblib.dump(source_scaler, source_scaler_path)
+        logger.info(f"保存 {source} 标准化模型: {source_scaler_path}")
+    
+    for source, source_pca in all_pcas.items():
+        source_pca_path = os.path.join(models_dir, f'pca_{source}.pkl')
+        joblib.dump(source_pca, source_pca_path)
+        logger.info(f"保存 {source} PCA模型: {source_pca_path}")
     
     logger.info(f"模型已保存到: {models_dir}")
     send_notification(f"模型已保存到: {models_dir}")
     send_progress_value(70)
-    logger.info(f"PCA 模型: {pca_path}")
-    logger.info(f"标准化模型: {scaler_path}")
     
     # 将PCA降维结果保存到数据库
     try:
@@ -238,61 +312,63 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        # 清空 fusion_features 表（每次训练前清空）
-        cursor.execute("DELETE FROM fusion_features")
-        conn.commit()
-        logger.info("已清空 fusion_features 表")
-        send_notification("已清空 fusion_features 表")
-        
         import json
+        from datetime import datetime
         
         # 生成模型ID（基于时间戳）
-        from datetime import datetime
         model_id = f"PCA_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
-        # 从原始数据中获取故障类型和故障位置
-        fault_types = df['fault_type'].values if 'fault_type' in df.columns else [None]*len(X_pca)
-        fault_locations = df['fault_location'].values if 'fault_location' in df.columns else [None]*len(X_pca)
+        # 保存各数据源的PCA结果到对应的表
+        table_mapping = {
+            'DGA': 'fusion_features_dga',
+            'PD_CH1': 'fusion_features_pd_ch1',
+            'PD_CH2': 'fusion_features_pd_ch2',
+            'PD_CH3': 'fusion_features_pd_ch3',
+            'PD_CH4': 'fusion_features_pd_ch4'
+        }
         
-        # 插入融合特征数据
-        insert_query = """
-        INSERT INTO fusion_features 
-        (sample_id, model_id, principal_components, fault_type, fault_location, source_file)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """
-        
-        inserted_count = 0
-        total_count = len(X_pca)
-        
-        for i, (pc_values, fault_type, fault_location) in enumerate(zip(X_pca, fault_types, fault_locations)):
-            sample_id = f"PCA_{i+1}"
-            
-            # 将主成分得分转换为JSON
-            pc_json = json.dumps(pc_values.tolist())
-            
-            params = [
-                sample_id, model_id, pc_json, fault_type, fault_location, 'PCA_transform'
-            ]
-            
+        # 清空各数据源的PCA表
+        for table_name in table_mapping.values():
             try:
-                cursor.execute(insert_query, params)
-                inserted_count += 1
-                
-                # 每插入10%的数据更新一次进度
-                if inserted_count % max(1, total_count // 10) == 0:
-                    progress = 80 + (inserted_count / total_count) * 15
-                    send_progress_value(int(progress))
-                    
+                cursor.execute(f"DELETE FROM {table_name}")
+                logger.info(f"已清空 {table_name} 表")
             except Exception as e:
-                error_msg = f"插入第 {i+1} 条PCA结果失败: {e}"
-                logger.error(error_msg)
-                send_notification(error_msg)
-                continue
+                logger.warning(f"清空 {table_name} 表失败: {e}")
+        
+        # 保存各数据源的PCA结果
+        for i, data in enumerate(processed_data):
+            source = data['source']
+            X_source = data['X']
+            y_source = data['y']
+            locations_source = data['locations']
+            
+            if source in table_mapping:
+                table_name = table_mapping[source]
+                insert_query = f"""
+                INSERT INTO {table_name} 
+                (sample_id, model_id, principal_components, fault_type, fault_location, source_file)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """
+                
+                inserted_count = 0
+                for j, (pc_values, fault_type, fault_location) in enumerate(zip(X_source, y_source, locations_source)):
+                    sample_id = f"{source}_{j+1}"
+                    pc_json = json.dumps(pc_values.tolist())
+                    
+                    params = [sample_id, model_id, pc_json, fault_type, fault_location, source]
+                    
+                    try:
+                        cursor.execute(insert_query, params)
+                        inserted_count += 1
+                    except Exception as e:
+                        logger.error(f"插入 {source} 第 {j+1} 条数据失败: {e}")
+                
+                logger.info(f"成功将 {inserted_count} 条 {source} PCA结果保存到 {table_name}")
+                send_notification(f"{source} 数据已保存: {inserted_count} 条")
         
         conn.commit()
-        success_msg = f"成功将 {inserted_count} 条PCA结果保存到数据库"
-        logger.info(success_msg)
-        send_notification(success_msg)
+        logger.info("PCA结果已保存到数据库")
+        send_notification("PCA结果已保存到数据库")
         send_progress_value(95)
         conn.close()
     except Exception as e:
@@ -303,23 +379,13 @@ def train_pca_model(data_source='database', data_file='DGA_data.xlsx', db_path='
     # 返回模型信息
     send_progress_value(100)
     return {
-        'pca_model': pca,
-        'scaler': scaler,
-        'n_components': X_pca.shape[1],
-        'explained_variance_ratio': pca.explained_variance_ratio_.tolist(),
-        'cumulative_variance': pca.explained_variance_ratio_.cumsum().tolist(),
-        'pca_path': pca_path,
-        'scaler_path': scaler_path
+        'all_scalers': all_scalers,
+        'all_pcas': all_pcas,
+        'processed_data': processed_data
     }
 
 
 if __name__ == "__main__":
-    # 当直接运行脚本时执行训练
-    # 从指定的数据库文件读取数据
     result = train_pca_model(data_source='database')
-    logger.info(f"PCA训练完成，保留 {result['n_components']} 个主成分")
-    logger.info(f"累计方差贡献率: {result['cumulative_variance'][-1]:.4f}")
-    logger.info(f"模型已保存到: {result['pca_path']}")
-    print(f"PCA训练完成，保留 {result['n_components']} 个主成分")
-    print(f"累计方差贡献率: {result['cumulative_variance'][-1]:.4f}")
-    print(f"模型已保存到: {result['pca_path']}")
+    logger.info("PCA训练完成")
+    print("PCA训练完成")
