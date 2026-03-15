@@ -13,6 +13,7 @@ from .table_manager import TableManager
 from .model_manager import ModelManager
 from .thread_manager import ThreadManager
 from .ui_manager import UIManager
+from .chart_manager import ChartManager, ChartContainer
 
 __all__ = [
     'train_pca_model',
@@ -24,5 +25,7 @@ __all__ = [
     'TableManager',
     'ModelManager',
     'ThreadManager',
-    'UIManager'
+    'UIManager',
+    'ChartManager',
+    'ChartContainer'
 ]

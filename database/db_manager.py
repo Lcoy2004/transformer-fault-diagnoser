@@ -22,21 +22,68 @@ CREATE_TABLE_SQL = {
             source_file TEXT
         )
     """,
-    'hf_partial_discharge': """
-        CREATE TABLE IF NOT EXISTS hf_partial_discharge (
+
+    'fusion_features_dga': """
+        CREATE TABLE IF NOT EXISTS fusion_features_dga (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sample_id TEXT NOT NULL,
-            amplitude REAL, frequency REAL, phase REAL, pulse_count INTEGER,
+            model_id TEXT,
+            principal_components TEXT,
             fault_type TEXT, fault_location TEXT,
             sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             source_file TEXT
         )
     """,
-    'uhf_partial_discharge': """
-        CREATE TABLE IF NOT EXISTS uhf_partial_discharge (
+    'fusion_features_pd_ch1': """
+        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch1 (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sample_id TEXT NOT NULL,
-            amplitude REAL, frequency REAL, phase REAL, time_difference REAL,
+            model_id TEXT,
+            principal_components TEXT,
+            fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'fusion_features_pd_ch2': """
+        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch2 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            model_id TEXT,
+            principal_components TEXT,
+            fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'fusion_features_pd_ch3': """
+        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch3 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            model_id TEXT,
+            principal_components TEXT,
+            fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'fusion_features_pd_ch4': """
+        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch4 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            model_id TEXT,
+            principal_components TEXT,
+            fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'fusion_features_combined': """
+        CREATE TABLE IF NOT EXISTS fusion_features_combined (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            model_id TEXT,
+            principal_components TEXT,
             fault_type TEXT, fault_location TEXT,
             sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             source_file TEXT
@@ -49,6 +96,99 @@ CREATE_TABLE_SQL = {
             model_id TEXT,
             principal_components TEXT,
             fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+
+    'pd_channel_1': """
+        CREATE TABLE IF NOT EXISTS pd_channel_1 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            filename TEXT,
+            ch1_band1_energy REAL,
+            ch1_band2_energy REAL,
+            ch1_band3_energy REAL,
+            ch1_band4_energy REAL,
+            ch1_kurtosis REAL,
+            ch1_main_amp REAL,
+            ch1_main_freq REAL,
+            ch1_mean REAL,
+            ch1_peak REAL,
+            ch1_pulse_width REAL,
+            ch1_skewness REAL,
+            ch1_var REAL,
+            fault_type TEXT,
+            fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'pd_channel_2': """
+        CREATE TABLE IF NOT EXISTS pd_channel_2 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            filename TEXT,
+            ch2_band1_energy REAL,
+            ch2_band2_energy REAL,
+            ch2_band3_energy REAL,
+            ch2_band4_energy REAL,
+            ch2_kurtosis REAL,
+            ch2_main_amp REAL,
+            ch2_main_freq REAL,
+            ch2_mean REAL,
+            ch2_peak REAL,
+            ch2_pulse_width REAL,
+            ch2_skewness REAL,
+            ch2_var REAL,
+            fault_type TEXT,
+            fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'pd_channel_3': """
+        CREATE TABLE IF NOT EXISTS pd_channel_3 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            filename TEXT,
+            ch3_band1_energy REAL,
+            ch3_band2_energy REAL,
+            ch3_band3_energy REAL,
+            ch3_band4_energy REAL,
+            ch3_kurtosis REAL,
+            ch3_main_amp REAL,
+            ch3_main_freq REAL,
+            ch3_mean REAL,
+            ch3_peak REAL,
+            ch3_pulse_width REAL,
+            ch3_skewness REAL,
+            ch3_var REAL,
+            fault_type TEXT,
+            fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """,
+    'pd_channel_4': """
+        CREATE TABLE IF NOT EXISTS pd_channel_4 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            filename TEXT,
+            ch4_band1_energy REAL,
+            ch4_band2_energy REAL,
+            ch4_band3_energy REAL,
+            ch4_band4_energy REAL,
+            ch4_kurtosis REAL,
+            ch4_main_amp REAL,
+            ch4_main_freq REAL,
+            ch4_mean REAL,
+            ch4_peak REAL,
+            ch4_pulse_width REAL,
+            ch4_skewness REAL,
+            ch4_var REAL,
+            fault_type TEXT,
+            fault_location TEXT,
             sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             source_file TEXT
         )

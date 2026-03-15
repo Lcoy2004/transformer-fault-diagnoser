@@ -445,6 +445,7 @@ QWidget#centralwidget {
     </property>
     <addaction name="action_6"/>
     <addaction name="separator"/>
+    <addaction name="action"/>
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
@@ -473,6 +474,11 @@ QWidget#centralwidget {
   <action name="action_8">
    <property name="text">
     <string>关于</string>
+   </property>
+  </action>
+  <action name="action">
+   <property name="text">
+    <string>原始图表</string>
    </property>
   </action>
  </widget>

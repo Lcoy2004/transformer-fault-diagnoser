@@ -66,22 +66,52 @@ class ModelManager:
     
     def _on_rf_finished(self, result: Dict[str, Any]) -> None:
         """随机森林训练完成处理"""
-        self._ui.update_output(f"模型训练完成")
-        self._ui.update_output(f"准确率: {result.get('accuracy', 0):.4f}")
-        
-        if 'fault_type_report' in result:
-            self._ui.update_output(f"故障类型准确率: {result['fault_type_report']}")
-        if 'fault_location_report' in result:
-            self._ui.update_output(f"故障位置准确率: {result['fault_location_report']}")
-        
-        model_type = "多输出" if result.get('is_multi_output') else "单输出"
-        self._ui.update_output(f"模型类型: {model_type}")
-        self._ui.update_output(f"模型路径: {result.get('model_path', 'N/A')}")
+        # 检查结果格式
+        if 'all_models' in result:
+            # 新格式：包含所有模型结果
+            all_models = result['all_models']
+            
+            self._ui.update_output("=" * 50)
+            self._ui.update_output("模型训练完成")
+            self._ui.update_output("=" * 50)
+            
+            # 显示各模型准确率
+            for model_name, model_result in all_models.items():
+                self._ui.update_output(f"\n【{model_name} 模型】")
+                self._ui.update_output(f"  准确率: {model_result.get('accuracy', 0):.4f}")
+                
+                if model_result.get('is_multi_output'):
+                    self._ui.update_output(f"  故障类型准确率: {model_result.get('accuracy_type', 0):.4f}")
+                    self._ui.update_output(f"  故障位置准确率: {model_result.get('accuracy_location', 0):.4f}")
+                
+                self._ui.update_output(f"  模型路径: {model_result.get('model_path', 'N/A')}")
+            
+            # 显示融合策略说明
+            self._ui.update_output("\n" + "=" * 50)
+            self._ui.update_output("决策级融合策略:")
+            self._ui.update_output("1. DGA模型: 预测故障大类（正常、过热、放电）")
+            self._ui.update_output("2. PD融合模型: 将四通道数据融合后预测放电细类")
+            self._ui.update_output("3. 综合融合模型: 融合DGA和PD数据进行预测")
+            self._ui.update_output("4. 决策融合: DGA预测放电时，用PD模型细化放电类型")
+            self._ui.update_output("=" * 50)
+        else:
+            # 旧格式：只有单个模型结果
+            self._ui.update_output(f"模型训练完成")
+            self._ui.update_output(f"准确率: {result.get('accuracy', 0):.4f}")
+            
+            if 'fault_type_report' in result:
+                self._ui.update_output(f"故障类型准确率: {result['fault_type_report']}")
+            if 'fault_location_report' in result:
+                self._ui.update_output(f"故障位置准确率: {result['fault_location_report']}")
+            
+            model_type = "多输出" if result.get('is_multi_output') else "单输出"
+            self._ui.update_output(f"模型类型: {model_type}")
+            self._ui.update_output(f"模型路径: {result.get('model_path', 'N/A')}")
         
         # 重新加载预测器
         try:
             self._data.reload_predictor()
-            self._ui.update_output("预测器已重新加载")
+            self._ui.update_output("\n预测器已重新加载")
         except Exception as e:
             logger.error(f"重新加载预测器失败: {e}")
     

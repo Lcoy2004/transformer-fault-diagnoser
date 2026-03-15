@@ -7,14 +7,14 @@ import sys
 import os
 from datetime import datetime
 from typing import Optional
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QVBoxLayout
 from PySide6.QtCore import Qt
 
 from config import setup_logging, notify
 from ui import main_ui, aboutme_ui
 from utils import (
     UIManager, DataProcessor, ThreadManager,
-    InputManager, TableManager, ModelManager
+    InputManager, TableManager, ModelManager, ChartContainer
 )
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         # 菜单
         self.ui.action_6.triggered.connect(self._import_data)
         self.ui.action_8.triggered.connect(self._show_about)
+        self.ui.action.triggered.connect(self._show_chart)
         
         # 选择器
         self.ui.table_selector.currentIndexChanged.connect(self._on_table_changed)
@@ -195,6 +196,22 @@ class MainWindow(QMainWindow):
         ui.textEdit.setMarkdown(about_content)
         
         # 显示窗口
+        dialog.exec()
+    
+    def _show_chart(self):
+        """显示原始图表窗口"""
+        from PySide6.QtWidgets import QDialog
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("原始数据显示图")
+        dialog.resize(900, 700)
+        
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        chart_container = ChartContainer(dialog)
+        layout.addWidget(chart_container)
+        
         dialog.exec()
 
 
