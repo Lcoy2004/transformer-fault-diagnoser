@@ -8,13 +8,14 @@
 """
 
 import logging
-import os
-import sys
-
-import numpy as np
 import joblib
+import numpy as np
+
+from config.constants import PD_CHANNELS
+from config.helpers import get_models_dir
 
 logger = logging.getLogger(__name__)
+
 
 class Predictor:
     """预测器"""
@@ -28,32 +29,27 @@ class Predictor:
     
     def load_models(self):
         """加载模型"""
-        # 获取项目根目录（处理打包环境）
-        if hasattr(sys, '_MEIPASS'):
-            models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
-        else:
-            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            models_dir = os.path.join(root_dir, 'models')
+        models_dir = get_models_dir()
         
         try:
-            # 为所有数据类型加载对应的PCA和Scaler模型
-            for data_type in ['DGA', 'PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4']:
-                type_scaler_path = os.path.join(models_dir, f'scaler_{data_type}.pkl')
-                type_pca_path = os.path.join(models_dir, f'pca_{data_type}.pkl')
+            for data_type in ['DGA'] + PD_CHANNELS:
+                scaler_path = f'{models_dir}/scaler_{data_type}.pkl'
+                pca_path = f'{models_dir}/pca_{data_type}.pkl'
                 
-                if all(os.path.exists(path) for path in [type_scaler_path, type_pca_path]):
-                    self.scalers[data_type] = joblib.load(type_scaler_path)
-                    self.pcas[data_type] = joblib.load(type_pca_path)
+                import os
+                if os.path.exists(scaler_path) and os.path.exists(pca_path):
+                    self.scalers[data_type] = joblib.load(scaler_path)
+                    self.pcas[data_type] = joblib.load(pca_path)
                     logger.info(f"[加载] {data_type} PCA模型成功")
             
-            # 加载训练好的随机森林模型
             model_files = {
                 'DGA': 'random_forest_dga_model.pkl',
                 'PD_FUSION': 'random_forest_pd_fusion_model.pkl'
             }
             
             for model_name, model_file in model_files.items():
-                model_path = os.path.join(models_dir, model_file)
+                model_path = f'{models_dir}/{model_file}'
+                import os
                 if os.path.exists(model_path):
                     self.models[model_name] = joblib.load(model_path)
                     logger.info(f"[加载] {model_name} 随机森林模型成功")
@@ -89,18 +85,23 @@ class Predictor:
             tuple: (故障类型, 故障位置)
         """
         fused_data = []
-        for ch in ['PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4']:
-            if ch in input_data_dict:
-                ch_data = input_data_dict[ch]
-                if ch in self.pcas:
-                    X = np.array([ch_data])
-                    scaler = self.scalers[ch]
-                    pca = self.pcas[ch]
-                    X_scaled = scaler.transform(X)
-                    X_pca = pca.transform(X_scaled)
-                    fused_data.append(X_pca[0])
         
-        if not fused_data:
+        for ch in PD_CHANNELS:
+            if ch in input_data_dict and ch in self.pcas:
+                ch_data = input_data_dict[ch]
+                X = np.array([ch_data])
+                scaler = self.scalers[ch]
+                pca = self.pcas[ch]
+                X_scaled = scaler.transform(X)
+                X_pca = pca.transform(X_scaled)
+                fused_data.append(X_pca[0])
+            elif ch in self.pcas:
+                pca = self.pcas[ch]
+                n_components = pca.n_components_
+                fused_data.append(np.zeros(n_components))
+                logger.warning(f"[警告] {ch} 数据缺失，使用零填充")
+        
+        if not any(np.any(d != 0) for d in fused_data):
             raise ValueError("[错误] 没有有效的PD数据")
         
         fused_features = np.concatenate(fused_data)
@@ -144,7 +145,6 @@ class Predictor:
         dga_result = None
         pd_result = None
         
-        # 1. DGA预测
         if 'DGA' in input_data_dict and 'DGA' in self.models:
             try:
                 dga_type, dga_location = self.predict_dga(input_data_dict['DGA'])
@@ -154,8 +154,7 @@ class Predictor:
             except Exception as e:
                 logger.error(f"[DGA预测失败] {e}")
         
-        # 2. PD融合预测
-        has_pd_data = any(ch in input_data_dict for ch in ['PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4'])
+        has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
         if has_pd_data and 'PD_FUSION' in self.models:
             try:
                 pd_type, pd_location = self.predict_pd_fusion(input_data_dict)
@@ -165,7 +164,6 @@ class Predictor:
             except Exception as e:
                 logger.error(f"[PD融合预测失败] {e}")
         
-        # 3. 决策级融合
         fusion_type = None
         fusion_location = None
         confidence = 0.0

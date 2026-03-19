@@ -6,15 +6,13 @@ import logging
 import sys
 import os
 from datetime import datetime
-from typing import Optional
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QVBoxLayout
-from PySide6.QtCore import Qt
 
 from config import setup_logging, notify
 from ui import main_ui, aboutme_ui
 from utils import (
     UIManager, DataProcessor, ThreadManager,
-    InputManager, TableManager, ModelManager, ChartContainer
+    InputManager, TableManager, ModelManager, ChartContainer, PredictManager
 )
 
 logger = logging.getLogger(__name__)
@@ -51,23 +49,34 @@ class MainWindow(QMainWindow):
             self._data
         )
         self._model = ModelManager(self._data, self._ui, self._thread)
+        self._predictor = PredictManager(
+            self, self._data, self._input, self._ui, self._thread,
+            self._set_buttons_enabled, notify
+        )
     
     def _connect_signals(self):
         """连接信号"""
-        # 按钮
         self.ui.pushButton.clicked.connect(self._refresh_tables)
         self.ui.btn_pca.clicked.connect(self._model.train_pca)
         self.ui.btn_rf.clicked.connect(self._model.train_rf)
-        self.ui.btn_pd.clicked.connect(self._predict)
+        self.ui.btn_pd.clicked.connect(self._predictor.start_predict)
         self.ui.showlog_btn.clicked.connect(self._show_log)
         
-        # 菜单
         self.ui.action_6.triggered.connect(self._import_data)
         self.ui.action_8.triggered.connect(self._show_about)
         self.ui.action.triggered.connect(self._show_chart)
         
-        # 选择器
         self.ui.table_selector.currentIndexChanged.connect(self._on_table_changed)
+    
+    def _set_buttons_enabled(self, enabled: bool):
+        """设置所有按钮的启用状态"""
+        self.ui.pushButton.setEnabled(enabled)
+        self.ui.btn_pca.setEnabled(enabled)
+        self.ui.btn_rf.setEnabled(enabled)
+        self.ui.btn_pd.setEnabled(enabled)
+        self.ui.showlog_btn.setEnabled(enabled)
+        self.ui.input_combobox.setEnabled(enabled)
+        self.ui.table_selector.setEnabled(enabled)
     
     def _refresh_tables(self):
         """刷新表列表"""
@@ -92,27 +101,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"表选择变化处理失败: {e}")
     
-    def _predict(self):
-        """预测故障"""
-        try:
-            input_data = self._input.get_data()
-            if input_data is None:
-                QMessageBox.warning(self, "错误", "请填写所有输入数据")
-                return
-            
-            data_type = self._input.get_type()
-            fault_type, fault_location = self._data.predict(input_data, data_type)
-            
-            self._ui.clear_output()
-            self._ui.update_output(f"预测结果：")
-            self._ui.update_output(f"故障类型: {fault_type}")
-            self._ui.update_output(f"故障位置: {fault_location}")
-            
-            notify("预测完成")
-        except Exception as e:
-            logger.error(f"预测失败: {e}")
-            QMessageBox.warning(self, "错误", f"预测失败: {e}")
-    
     def _show_log(self):
         """显示日志"""
         try:
@@ -136,7 +124,6 @@ class MainWindow(QMainWindow):
         try:
             table_name = self._table.get_current_table()
             
-            # 选择文件
             dialog = QFileDialog(self)
             dialog.setWindowTitle("选择数据文件")
             dialog.setNameFilter("Excel文件 (*.xlsx)")
@@ -146,10 +133,8 @@ class MainWindow(QMainWindow):
                 return
             
             file_path = dialog.selectedFiles()[0]
-            
             self._ui.clear_output()
             
-            # 启动导入任务
             worker = self._thread.start(self._data.import_data, file_path, table_name)
             worker.progress.connect(self._ui.update_output)
             worker.progress_value.connect(self._ui.update_progress)
@@ -174,11 +159,8 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         ui = aboutme_ui.Ui_Dialog_aboutme()
         ui.setupUi(dialog)
-        
-        # 设置窗口标题
         dialog.setWindowTitle("关于")
         
-        # 添加Markdown内容
         about_content = """
 ## 本科毕业设计
 ---
@@ -188,14 +170,8 @@ class MainWindow(QMainWindow):
 **UNIVERSITY_NAME COLLEGE_NAME**  
 **学生**：AUTHOR_NAME（GRADE_INFO）  
 **项目地址**：[https://gitee.com/lcoy/transformer-fault-diagnoser](https://gitee.com/lcoy/transformer-fault-diagnoser)
-
-
 """
-        
-        # 设置文本内容
         ui.textEdit.setMarkdown(about_content)
-        
-        # 显示窗口
         dialog.exec()
     
     def _show_chart(self):
@@ -213,7 +189,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(chart_container)
         
         dialog.exec()
-
 
 
 def main():

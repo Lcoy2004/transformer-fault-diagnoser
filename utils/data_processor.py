@@ -134,7 +134,7 @@ class DataProcessor:
         
         Args:
             input_data: 输入数据
-            data_type: 数据类型 (DGA/HF/UHF)
+            data_type: 数据类型 (DGA/PD_CH1/PD_CH2/PD_CH3/PD_CH4)
             
         Returns:
             (故障类型, 故障位置)
@@ -162,10 +162,13 @@ class DataProcessor:
     
     def _ensure_init(self) -> None:
         """确保已初始化"""
-        if self._db is None:
+        if self._db is None or self._importer is None:
             self._init()
+        assert self._db is not None
+        assert self._importer is not None
     
     def _ensure_predictor(self) -> None:
         """确保预测器已加载"""
         if self._predictor is None:
             self._predictor = Predictor()
+        assert self._predictor is not None
