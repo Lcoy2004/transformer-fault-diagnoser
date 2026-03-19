@@ -14,55 +14,13 @@ from PySide6.QtCharts import QChartView, QChart, QLineSeries, QValueAxis
 from PySide6.QtGui import QColor, QPen, QPainter
 
 from database.db_manager import DatabaseManager
+from config.constants import TABLE_CONFIGS, PD_DB_TABLES
 
 logger = logging.getLogger(__name__)
 
 
 class ChartManager:
     """图表管理器 - 管理图表的创建和数据展示"""
-    
-    TABLE_CONFIG = {
-        'pd_channel_1': {
-            'name': '通道1 (PD)',
-            'feature_cols': ['ch1_band1_energy', 'ch1_band2_energy', 'ch1_band3_energy',
-                           'ch1_band4_energy', 'ch1_kurtosis', 'ch1_main_amp',
-                           'ch1_main_freq', 'ch1_mean', 'ch1_peak', 
-                           'ch1_pulse_width', 'ch1_skewness', 'ch1_var'],
-            'label_col': 'fault_type',
-            'type': 'auto',
-            'description': '局部放电通道1特征数据'
-        },
-        'pd_channel_2': {
-            'name': '通道2 (PD)',
-            'feature_cols': ['ch2_band1_energy', 'ch2_band2_energy', 'ch2_band3_energy',
-                           'ch2_band4_energy', 'ch2_kurtosis', 'ch2_main_amp',
-                           'ch2_main_freq', 'ch2_mean', 'ch2_peak',
-                           'ch2_pulse_width', 'ch2_skewness', 'ch2_var'],
-            'label_col': 'fault_type',
-            'type': 'auto',
-            'description': '局部放电通道2特征数据'
-        },
-        'pd_channel_3': {
-            'name': '通道3 (PD)',
-            'feature_cols': ['ch3_band1_energy', 'ch3_band2_energy', 'ch3_band3_energy',
-                           'ch3_band4_energy', 'ch3_kurtosis', 'ch3_main_amp',
-                           'ch3_main_freq', 'ch3_mean', 'ch3_peak',
-                           'ch3_pulse_width', 'ch3_skewness', 'ch3_var'],
-            'label_col': 'fault_type',
-            'type': 'auto',
-            'description': '局部放电通道3特征数据'
-        },
-        'pd_channel_4': {
-            'name': '通道4 (PD)',
-            'feature_cols': ['ch4_band1_energy', 'ch4_band2_energy', 'ch4_band3_energy',
-                           'ch4_band4_energy', 'ch4_kurtosis', 'ch4_main_amp',
-                           'ch4_main_freq', 'ch4_mean', 'ch4_peak',
-                           'ch4_pulse_width', 'ch4_skewness', 'ch4_var'],
-            'label_col': 'fault_type',
-            'type': 'auto',
-            'description': '局部放电通道4特征数据'
-        }
-    }
     
     def __init__(self, db_path: str = 'database/fault_data.db'):
         self.db = DatabaseManager(db_path)
@@ -74,9 +32,11 @@ class ChartManager:
         tables = []
         all_tables = self.db.get_all_tables()
         
-        for table_name, config in self.TABLE_CONFIG.items():
+        for table_name in PD_DB_TABLES:
             if table_name in all_tables:
-                tables.append((table_name, config['name']))
+                config = TABLE_CONFIGS.get(table_name)
+                if config:
+                    tables.append((table_name, config['name']))
         
         return tables
     
@@ -87,10 +47,10 @@ class ChartManager:
         Returns:
             (特征数据, 标签数据, 特征列名)
         """
-        if table_name not in self.TABLE_CONFIG:
+        if table_name not in TABLE_CONFIGS:
             raise ValueError(f"[错误] 未知表: {table_name}")
         
-        config = self.TABLE_CONFIG[table_name]
+        config = TABLE_CONFIGS[table_name]
         data, columns = self.db.get_table_data(table_name)
         
         if not data:
@@ -98,7 +58,7 @@ class ChartManager:
         
         col_idx = {col: idx for idx, col in enumerate(columns)}
         
-        feature_cols = config['feature_cols']
+        feature_cols = config['features']
         label_col = config['label_col']
         
         valid_cols = [c for c in feature_cols if c in col_idx]
@@ -190,8 +150,8 @@ class ChartContainer(QWidget):
         """刷新特征列表"""
         self.feature_selector.clear()
         
-        if table_name in self.chart_manager.TABLE_CONFIG:
-            feature_cols = self.chart_manager.TABLE_CONFIG[table_name]['feature_cols']
+        if table_name in TABLE_CONFIGS:
+            feature_cols = TABLE_CONFIGS[table_name]['features']
             
             for i, feature in enumerate(feature_cols):
                 self.feature_selector.addItem(feature, i)
@@ -211,9 +171,9 @@ class ChartContainer(QWidget):
         try:
             X, y, feature_names = self.chart_manager.load_table_data(table_name)
             
-            config = self.chart_manager.TABLE_CONFIG[table_name]
+            config = TABLE_CONFIGS[table_name]
             self.info_label.setText(
-                f"数据表: {config['description']} | "
+                f"数据表: {config['name']} | "
                 f"样本数: {len(X)} | 特征数: {X.shape[1]}"
             )
             
@@ -251,7 +211,6 @@ class ChartContainer(QWidget):
             return
         
         X, y, feature_names = self.chart_manager._current_data
-        table_name = self.chart_manager._current_table
         feature_index = self.feature_selector.currentData()
         
         if feature_index is None or feature_index < 0:
@@ -289,14 +248,13 @@ class ChartContainer(QWidget):
         chart.addAxis(axis_y, Qt.AlignLeft)
         
         colors = [
-            QColor(0, 114, 189),    # 蓝色
-            QColor(217, 83, 25),    # 橙色
-            QColor(237, 177, 32),   # 黄色
-            QColor(126, 47, 142),   # 紫色
-            QColor(32, 134, 48),    # 绿色
+            QColor(0, 114, 189),
+            QColor(217, 83, 25),
+            QColor(237, 177, 32),
+            QColor(126, 47, 142),
+            QColor(32, 134, 48),
         ]
         
-        # 按故障类型分组
         unique_faults = set(y)
         fault_list = list(unique_faults)
         
@@ -308,11 +266,9 @@ class ChartContainer(QWidget):
             pen.setWidth(1)
             series.setPen(pen)
             
-            # 获取该故障类型的样本索引和特征值
             indices = [j for j, label in enumerate(y) if label == fault_type]
             values = [feature_data[j] for j in indices]
             
-            # 添加数据点
             for idx, val in enumerate(indices):
                 series.append(QPointF(float(idx), float(values[idx])))
             
@@ -320,7 +276,6 @@ class ChartContainer(QWidget):
             series.attachAxis(axis_x)
             series.attachAxis(axis_y)
         
-        # 设置坐标轴范围
         if len(feature_data) > 0:
             axis_x.setRange(0, len(feature_data) - 1)
             y_min, y_max = feature_data.min(), feature_data.max()

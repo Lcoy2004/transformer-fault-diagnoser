@@ -3,10 +3,7 @@
 """
 
 import logging
-import os
-import sys
 import json
-
 import numpy as np
 import pandas as pd
 import joblib
@@ -16,8 +13,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 from config import notify
+from database.db_manager import DatabaseManager
+from config.constants import PCA_TABLE_MAPPING
+from config.helpers import ensure_models_dir, ProgressHelper
 
 logger = logging.getLogger(__name__)
+
 
 def train_random_forest(
     data_source='database',
@@ -49,43 +50,31 @@ def train_random_forest(
     Returns:
         dict: 训练结果
     """
-    def send_notification(message):
-        if progress_callback:
-            progress_callback(message)
-        else:
-            notify(message)
-    
-    def send_progress_value(value):
-        if progress_value_callback:
-            progress_value_callback(value)
+    progress = ProgressHelper(progress_callback, progress_value_callback)
     
     try:
-        send_notification("=" * 50)
-        send_notification("开始训练随机森林模型")
-        send_notification("=" * 50)
-        send_progress_value(5)
+        progress.send("=" * 50)
+        progress.send("开始训练随机森林模型")
+        progress.send("=" * 50)
+        progress.update(5)
         
         if data_source == 'database':
-            from database.db_manager import DatabaseManager
             db_manager = DatabaseManager(db_path=db_path)
             conn = db_manager.get_connection()
             
-            # 1. 读取DGA数据
-            send_notification("\n[1/2] 读取DGA数据...")
+            progress.send("\n[1/2] 读取DGA数据...")
             try:
                 dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
                 df_dga = pd.read_sql_query(dga_query, conn)
                 if not df_dga.empty:
-                    send_notification(f"  DGA数据: {len(df_dga)} 条")
+                    progress.send(f"  DGA数据: {len(df_dga)} 条")
                     logger.info(f"DGA数据: {len(df_dga)} 条")
             except Exception as e:
                 logger.warning(f"读取DGA数据失败: {e}")
                 df_dga = pd.DataFrame()
             
-            # 2. 读取四通道PD数据并融合
-            send_notification("\n[2/2] 读取四通道PD数据...")
-            pd_channels = ['fusion_features_pd_ch1', 'fusion_features_pd_ch2', 
-                          'fusion_features_pd_ch3', 'fusion_features_pd_ch4']
+            progress.send("\n[2/2] 读取四通道PD数据...")
+            pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
             
             pd_data_by_sample = {}
             
@@ -97,7 +86,6 @@ def train_random_forest(
                     if not df_ch.empty:
                         for _, row in df_ch.iterrows():
                             sample_id = row['sample_id']
-                            # 提取样本编号（去掉通道前缀）
                             sample_num = sample_id.split('_')[-1]
                             
                             if sample_num not in pd_data_by_sample:
@@ -107,7 +95,6 @@ def train_random_forest(
                                     'fault_location': row['fault_location']
                                 }
                             
-                            import json
                             pc_data = json.loads(str(row['principal_components']))
                             pd_data_by_sample[sample_num]['pcs'].append(pc_data)
                         
@@ -115,11 +102,9 @@ def train_random_forest(
                 except Exception as e:
                     logger.warning(f"读取 {ch_table} 失败: {e}")
             
-            # 融合四通道PD数据
             pd_fused_data = []
             for sample_num, data in pd_data_by_sample.items():
-                if len(data['pcs']) == 4:  # 确保有四个通道的数据
-                    # 将四个通道的PCA结果拼接
+                if len(data['pcs']) == 4:
                     fused_pc = np.concatenate(data['pcs'])
                     pd_fused_data.append({
                         'principal_components': fused_pc,
@@ -127,7 +112,7 @@ def train_random_forest(
                         'fault_location': data['fault_location']
                     })
             
-            send_notification(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
+            progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
             logger.info(f"PD融合数据: {len(pd_fused_data)} 条")
             
             conn.close()
@@ -135,53 +120,47 @@ def train_random_forest(
         else:
             df = pd.read_excel(data_file)
             logger.info(f"从文件读取数据: {data_file}")
-            send_notification(f"从文件读取数据: {data_file}")
+            progress.send(f"从文件读取数据: {data_file}")
             df_dga = df
             pd_fused_data = []
         
-        send_progress_value(20)
+        progress.update(20)
         
-        # 存储所有模型结果
         results = {}
         
-        # 3. 训练DGA模型
         if not df_dga.empty:
-            send_notification("\n" + "=" * 40)
-            send_notification("训练DGA模型")
-            send_notification("=" * 40)
+            progress.send("\n" + "=" * 40)
+            progress.send("训练DGA模型")
+            progress.send("=" * 40)
             dga_result = _train_single_model(
-                df_dga, 'DGA', n_estimators, random_state,
-                send_notification, send_progress_value, logger
+                df_dga, 'DGA', n_estimators, random_state, progress, logger
             )
             if dga_result:
                 results['DGA'] = dga_result
-                send_progress_value(50)
+                progress.update(50)
         
-        # 4. 训练PD融合模型
         if pd_fused_data:
-            send_notification("\n" + "=" * 40)
-            send_notification("训练PD融合模型 (四通道融合)")
-            send_notification("=" * 40)
+            progress.send("\n" + "=" * 40)
+            progress.send("训练PD融合模型 (四通道融合)")
+            progress.send("=" * 40)
             df_pd = pd.DataFrame(pd_fused_data)
             pd_result = _train_single_model(
-                df_pd, 'PD_FUSION', n_estimators, random_state,
-                send_notification, send_progress_value, logger
+                df_pd, 'PD_FUSION', n_estimators, random_state, progress, logger
             )
             if pd_result:
                 results['PD_FUSION'] = pd_result
-                send_progress_value(80)
+                progress.update(80)
         
-        # 5. 汇总结果
-        send_notification("\n" + "=" * 50)
-        send_notification("模型训练完成汇总")
-        send_notification("=" * 50)
+        progress.send("\n" + "=" * 50)
+        progress.send("模型训练完成汇总")
+        progress.send("=" * 50)
         for model_name, result in results.items():
-            send_notification(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
+            progress.send(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
         
-        send_notification("\n注意：DGA和PD是不同的样本集")
-        send_notification("预测时使用决策级融合策略")
+        progress.send("\n注意：DGA和PD是不同的样本集")
+        progress.send("预测时使用决策级融合策略")
         
-        send_progress_value(100)
+        progress.update(100)
         
         return {
             'all_models': results,
@@ -191,12 +170,11 @@ def train_random_forest(
     except Exception as e:
         error_msg = f"训练随机森林模型失败: {e}"
         logger.error(error_msg)
-        send_notification(error_msg)
+        progress.send(error_msg)
         raise
 
 
-def _train_single_model(df, model_name, n_estimators, random_state, 
-                        send_notification, send_progress_value, logger):
+def _train_single_model(df, model_name, n_estimators, random_state, progress, logger):
     """
     训练单个模型
     
@@ -205,16 +183,12 @@ def _train_single_model(df, model_name, n_estimators, random_state,
         model_name: 模型名称
         n_estimators: 树的数量
         random_state: 随机种子
-        send_notification: 通知函数
-        send_progress_value: 进度函数
+        progress: 进度辅助器
         logger: 日志器
     
     Returns:
         dict: 训练结果
     """
-    import json
-    
-    # 解析主成分数据
     X = []
     y = []
     fault_locations = []
@@ -239,11 +213,11 @@ def _train_single_model(df, model_name, n_estimators, random_state,
     y = np.array(y)
     fault_locations = np.array(fault_locations)
     
-    # 检查是否有有效的故障位置数据
     has_location_data = any(loc is not None and str(loc).strip() != '' for loc in fault_locations)
     
+    models_dir = ensure_models_dir()
+    
     if has_location_data:
-        # 准备多输出标签
         valid_indices = [i for i, loc in enumerate(fault_locations) if loc is not None and str(loc).strip() != '']
         X = X[valid_indices]
         y = y[valid_indices]
@@ -255,12 +229,10 @@ def _train_single_model(df, model_name, n_estimators, random_state,
         else:
             y_multi = np.column_stack((y, fault_locations))
             
-            # 划分训练集和测试集
             X_train, X_test, y_train_multi, y_test_multi = train_test_split(
                 X, y_multi, test_size=0.2, random_state=random_state
             )
             
-            # 训练多输出模型
             base_model = RandomForestClassifier(
                 n_estimators=n_estimators,
                 random_state=random_state,
@@ -269,7 +241,6 @@ def _train_single_model(df, model_name, n_estimators, random_state,
             rf_model = MultiOutputClassifier(base_model, n_jobs=-1)
             rf_model.fit(X_train, y_train_multi)
             
-            # 评估
             y_pred_multi = rf_model.predict(X_test)
             y_test_type = y_test_multi[:, 0]
             y_test_location = y_test_multi[:, 1]
@@ -284,19 +255,11 @@ def _train_single_model(df, model_name, n_estimators, random_state,
             logger.info(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
             logger.info(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
             
-            send_notification(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            send_notification(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
-            send_notification(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
+            progress.send(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
+            progress.send(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
+            progress.send(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
             
-            # 保存模型
-            if hasattr(sys, '_MEIPASS'):
-                models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
-            else:
-                root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                models_dir = os.path.join(root_dir, 'models')
-            os.makedirs(models_dir, exist_ok=True)
-            
-            model_path = os.path.join(models_dir, f'random_forest_{model_name.lower()}_model.pkl')
+            model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
             joblib.dump(rf_model, model_path)
             logger.info(f"{model_name} 模型已保存: {model_path}")
             
@@ -310,7 +273,6 @@ def _train_single_model(df, model_name, n_estimators, random_state,
             }
     
     if not has_location_data:
-        # 训练单输出模型
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=random_state
         )
@@ -326,17 +288,9 @@ def _train_single_model(df, model_name, n_estimators, random_state,
         accuracy = accuracy_score(y_test, y_pred)
         
         logger.info(f"{model_name} 故障类型准确率: {accuracy:.4f}")
-        send_notification(f"{model_name} 故障类型准确率: {accuracy:.4f}")
+        progress.send(f"{model_name} 故障类型准确率: {accuracy:.4f}")
         
-        # 保存模型
-        if hasattr(sys, '_MEIPASS'):
-            models_dir = os.path.join(os.path.dirname(sys.executable), 'models')
-        else:
-            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            models_dir = os.path.join(root_dir, 'models')
-        os.makedirs(models_dir, exist_ok=True)
-        
-        model_path = os.path.join(models_dir, f'random_forest_{model_name.lower()}_model.pkl')
+        model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
         joblib.dump(rf_model, model_path)
         logger.info(f"{model_name} 模型已保存: {model_path}")
         
