@@ -8,6 +8,7 @@
 """
 
 import logging
+import os
 import joblib
 import numpy as np
 
@@ -35,21 +36,19 @@ class Predictor:
             for data_type in ['DGA'] + PD_CHANNELS:
                 scaler_path = f'{models_dir}/scaler_{data_type}.pkl'
                 pca_path = f'{models_dir}/pca_{data_type}.pkl'
-                
-                import os
+
                 if os.path.exists(scaler_path) and os.path.exists(pca_path):
                     self.scalers[data_type] = joblib.load(scaler_path)
                     self.pcas[data_type] = joblib.load(pca_path)
                     logger.info(f"[加载] {data_type} PCA模型成功")
-            
+
             model_files = {
                 'DGA': 'random_forest_dga_model.pkl',
                 'PD_FUSION': 'random_forest_pd_fusion_model.pkl'
             }
-            
+
             for model_name, model_file in model_files.items():
                 model_path = f'{models_dir}/{model_file}'
-                import os
                 if os.path.exists(model_path):
                     self.models[model_name] = joblib.load(model_path)
                     logger.info(f"[加载] {model_name} 随机森林模型成功")
