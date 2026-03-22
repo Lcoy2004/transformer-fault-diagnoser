@@ -148,11 +148,12 @@ class PredictManager:
     def _display_dga_result(self, data: Dict[str, Any]):
         """显示DGA预测结果"""
         self._ui.update_output("\n[DGA预测模式] 仅DGA数据")
-        if 'fusion' in data:
-            fusion_type, fusion_location, confidence = data['fusion']
+
+        if 'DGA' in data:
+            dga_type, dga_location = data['DGA']
             self._ui.update_output("\n" + "-" * 40)
-            self._ui.update_output(f"诊断结果: {fusion_type}")
-            self._ui.update_output(f"故障位置: {fusion_location}")
+            self._ui.update_output(f"诊断结果: {dga_type}")
+            self._ui.update_output(f"故障位置: {dga_location if dga_location else '未知'}")
     
     def _display_pd_result(self, data: Dict[str, Any]):
         """显示PD预测结果"""

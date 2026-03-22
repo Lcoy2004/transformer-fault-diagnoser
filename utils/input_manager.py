@@ -151,21 +151,6 @@ class InputManager:
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, 1, item)
     
-    def _cache_current_data(self) -> None:
-        """缓存当前输入数据"""
-        data = []
-        for row in range(self._table.rowCount()):
-            item = self._table.item(row, 1)
-            if item:
-                try:
-                    data.append(float(item.text().strip()))
-                except ValueError:
-                    data.append(0.0)
-        
-        data_type = self.get_type()
-        self._cache[data_type] = data
-        logger.debug(f"缓存数据: {data_type} = {data}")
-    
     def _load_cached_data(self) -> None:
         """加载缓存数据到表格"""
         data_type = self.get_type()
@@ -188,11 +173,10 @@ class InputManager:
     def get_all_cached_data(self) -> Dict[str, List[float]]:
         """
         获取所有缓存数据
-        
+
         Returns:
             所有已输入的数据字典
         """
-        self._cache_current_data()
         return self._cache.copy()
     
     def clear_cache(self) -> None:
@@ -204,15 +188,14 @@ class InputManager:
     def has_valid_pd_data(self) -> bool:
         """
         检查是否有有效的PD数据（非全零）
-        
+
         Returns:
             是否有有效PD数据
         """
-        from config.constants import PD_CHANNELS
-        for pd_type in PD_CHANNELS:
-            if pd_type in self._cache:
+        for pd_type in self._cache:
+            if pd_type.startswith('PD_CH'):
                 data = self._cache[pd_type]
-                if any(v != 0.0 for v in data):
+                if data and any(v != 0.0 for v in data):
                     return True
         return False
     
