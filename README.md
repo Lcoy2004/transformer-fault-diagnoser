@@ -1,8 +1,15 @@
 
 
+
 # TransformerFaultDiagnoser
 
-变压器故障诊断系统 - 基于油色谱分析（DGA）和机器学习算法的智能诊断工具
+<p align="center">
+  <img src="resources/icon.ico" alt="TransformerFaultDiagnoser Logo" width="128" height="128"/>
+  <br>
+  <strong>变压器故障诊断系统</strong>
+  <br>
+  基于油色谱分析（DGA）和机器学习算法的智能诊断工具
+</p>
 
 ## 项目简介
 
@@ -56,6 +63,9 @@ TransformerFaultDiagnoser/
 ├── test/               # 测试模块
 │   ├── test_main_gui.py # GUI测试
 │   └── test_pd_import.py # 导入测试
+├── resources/          # 资源文件
+│   ├── icon.ico        # 应用图标
+│   └── resources.qrc  # Qt资源定义
 └── main.py             # 主程序入口
 ```
 
@@ -69,6 +79,24 @@ TransformerFaultDiagnoser/
 
 ## 核心模块说明
 
+### config/config.py
+
+系统配置模块，定义常量及辅助函数。
+
+- `_get_pd_features(channel: int)`: 获取指定通道的放电特征列表
+- 提供PD特征定义和常量配置
+
+### config/helpers.py
+
+辅助工具模块，提供进度管理和目录工具。
+
+- `get_models_dir()`: 获取模型目录路径
+- `ensure_models_dir()`: 确保模型目录存在
+- `ProgressHelper`: 进度辅助类
+  - `send(message)`: 发送进度消息
+  - `update(value)`: 更新进度值
+  - `send_and_update(message, value)`: 发送消息并更新进度
+
 ### config/notification.py
 
 通知管理模块，提供系统消息通知功能。
@@ -78,14 +106,6 @@ TransformerFaultDiagnoser/
   - `get()`: 获取当前通知
   - `get_with_time()`: 获取带时间戳的通知
   - `clear()`: 清除通知
-
-### config/helpers.py
-
-辅助工具模块，提供进度管理和目录工具。
-
-- `get_models_dir()`: 获取模型目录路径
-- `ensure_models_dir()`: 确保模型目录存在
-- `ProgressHelper`: 进度辅助类，支持进度消息和进度值回调
 
 ### database/db_manager.py
 
@@ -100,6 +120,7 @@ TransformerFaultDiagnoser/
   - `get_table_data(table_name)`: 获取指定表数据
   - `execute(sql, params)`: 执行SQL语句
   - `executemany(sql, params_list)`: 批量执行SQL
+- `ConnectionContext`: 数据库连接上下文管理器
 
 ### utils/data_importer.py
 
@@ -171,11 +192,13 @@ PCA降维模块，用于特征提取和降维。
 
 图表管理模块，提供数据可视化功能。
 
+- `HoverLabel`: 悬浮标签组件
+- `ChartViewHover`: 带悬停提示的图表视图
 - `ChartManager`: 图表管理器类
   - `get_available_tables()`: 获取可用表格
   - `load_table_data(table_name)`: 加载表格数据
+  - `get_feature_display_name(col_name)`: 获取特征显示名称
 - `ChartContainer`: 图表容器窗口类
-  - 显示特征分布图和数据可视化
 
 ### main.py
 
@@ -271,6 +294,7 @@ python main.py
 | utils/ | 核心算法工具（PCA、随机森林）及各功能模块 |
 | data/ | 原始数据文件 |
 | test/ | 测试代码 |
+| resources/ | 应用资源文件 |
 | logs/ | 运行日志 |
 
 ## 参与贡献
