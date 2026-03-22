@@ -1,6 +1,5 @@
 
 
-
 # TransformerFaultDiagnoser
 
 <p align="center">
@@ -79,139 +78,36 @@ TransformerFaultDiagnoser/
 
 ## 核心模块说明
 
-### config/config.py
+### config 模块
 
 系统配置模块，定义常量及辅助函数。
 
-- `_get_pd_features(channel: int)`: 获取指定通道的放电特征列表
-- 提供PD特征定义和常量配置
+- **constants.py**: 提供PD特征定义和常量配置
+- **helpers.py**: 进度辅助类和目录工具
+- **notification.py**: 通知管理器类
+- **logging.py**: 日志配置
 
-### config/helpers.py
-
-辅助工具模块，提供进度管理和目录工具。
-
-- `get_models_dir()`: 获取模型目录路径
-- `ensure_models_dir()`: 确保模型目录存在
-- `ProgressHelper`: 进度辅助类
-  - `send(message)`: 发送进度消息
-  - `update(value)`: 更新进度值
-  - `send_and_update(message, value)`: 发送消息并更新进度
-
-### config/notification.py
-
-通知管理模块，提供系统消息通知功能。
-
-- `NotificationManager`: 通知管理器类
-  - `add(message)`: 添加通知消息
-  - `get()`: 获取当前通知
-  - `get_with_time()`: 获取带时间戳的通知
-  - `clear()`: 清除通知
-
-### database/db_manager.py
+### database 模块
 
 数据库管理模块，负责SQLite数据库操作。
 
-- `DatabaseManager`: 数据库管理器类
-  - `__init__(db_path)`: 初始化数据库连接
-  - `get_connection()`: 获取数据库连接
-  - `_init_tables()`: 创建数据表
-  - `import_dga_data()`: 导入DGA数据
-  - `get_all_tables()`: 获取所有数据表
-  - `get_table_data(table_name)`: 获取指定表数据
-  - `execute(sql, params)`: 执行SQL语句
-  - `executemany(sql, params_list)`: 批量执行SQL
-- `ConnectionContext`: 数据库连接上下文管理器
+- **db_manager.py**: 数据库管理器类，包含数据表的创建、查询、导入等功能
 
-### utils/data_importer.py
+### utils 模块
 
-数据导入模块，处理Excel数据导入。
+核心算法工具及功能模块。
 
-- `DataImporter`: 数据导入器类
-  - `detect_data_type(df)`: 检测数据类型
-  - `validate_columns(df, table_name)`: 验证列名
-  - `import_to_table(excel_file, table_name, ...)`: 导入数据到表
-  - `_map_column_name(col_name)`: 映射列名
-  - `_import_data_to_db(df, table_name, source_file, ...)`: 导入数据到数据库
-
-### utils/data_processor.py
-
-数据处理模块，整合数据导入、处理、训练和预测功能。
-
-- `DataProcessor`: 数据处理器类
-  - `init_database()`: 初始化数据库
-  - `import_data(excel_file, table_name, ...)`: 导入数据
-  - `get_all_tables()`: 获取所有表
-  - `get_table_data(table_name)`: 获取表数据
-  - `train_pca(progress_callback, ...)`: 训练PCA模型
-  - `train_model(progress_callback, ...)`: 训练模型
-  - `predict(input_data, data_type)`: 预测单条数据
-  - `predict_multi(input_data_dict)`: 多类型数据预测
-  - `reload_predictor()`: 重新加载预测器
-
-### utils/predictor.py
-
-预测器模块，加载训练好的模型进行故障预测。
-
-- `Predictor`: 预测器类
-  - `load_models()`: 加载模型
-  - `predict_dga(input_data)`: DGA数据预测
-  - `predict_pd_fusion(input_data_dict)`: 放电数据融合预测
-  - `predict_multi(input_data_dict)`: 多类型数据预测
-  - `predict(input_data, data_type)`: 单类型数据预测
-  - `get_supported_types()`: 获取支持的输入类型
-  - `has_model(model_name)`: 检查模型是否存在
-
-### utils/random_forest.py
-
-随机森林模块，用于模型训练和故障预测。
-
-- `train_random_forest(...)`: 训练随机森林模型
-  - 参数: data_source, data_file, db_path, n_estimators, random_state, progress_callback, progress_value_callback
-
-### utils/train_pca.py
-
-PCA降维模块，用于特征提取和降维。
-
-- `train_pca_model(...)`: 训练PCA模型
-  - 参数: data_source, data_file, db_path, feature_columns, n_components, progress_callback, progress_value_callback
-
-### utils/thread_manager.py
-
-线程管理模块，处理后台任务。
-
-- `WorkerThread`: 后台工作线程类
-  - `run()`: 执行后台任务
-  - `_on_progress(message)`: 进度消息回调
-  - `_on_progress_value(value)`: 进度值回调
-- `ThreadManager`: 线程管理器类
-  - `start(func, *args, **kwargs)`: 启动工作线程
-  - `stop()`: 停止工作线程
-  - `is_running`: 是否正在运行
-
-### utils/chart_manager.py
-
-图表管理模块，提供数据可视化功能。
-
-- `HoverLabel`: 悬浮标签组件
-- `ChartViewHover`: 带悬停提示的图表视图
-- `ChartManager`: 图表管理器类
-  - `get_available_tables()`: 获取可用表格
-  - `load_table_data(table_name)`: 加载表格数据
-  - `get_feature_display_name(col_name)`: 获取特征显示名称
-- `ChartContainer`: 图表容器窗口类
+- **data_importer.py**: 数据导入模块，处理Excel数据导入
+- **data_processor.py**: 数据处理模块，整合数据导入、处理、训练和预测功能
+- **predictor.py**: 预测器模块，加载训练好的模型进行故障预测
+- **random_forest.py**: 随机森林模块，用于模型训练和故障预测
+- **train_pca.py**: PCA降维模块，用于特征提取和降维
+- **thread_manager.py**: 线程管理模块，处理后台任务
+- **chart_manager.py**: 图表管理模块，提供数据可视化功能
 
 ### main.py
 
 主程序入口，包含GUI主窗口。
-
-- `MainWindow`: 主窗口类
-  - `_init_ui()`: 初始化界面组件
-  - `_init_managers()`: 初始化管理器
-  - `_connect_signals()`: 连接信号槽
-  - `_import_data()`: 导入数据
-  - `_show_chart()`: 显示图表
-  - `_show_about()`: 显示关于对话框
-- `main()`: 程序入口函数
 
 ## 安装教程
 
