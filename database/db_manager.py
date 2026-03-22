@@ -228,17 +228,27 @@ class DatabaseManager:
         Returns:
             (数据行列表, 列名列表)
         """
+        # 验证表名合法性，防止SQL注入
+        if not self._is_valid_table_name(table_name):
+            raise ValueError(f"非法表名: {table_name}")
+        
         with self._connect() as conn:
-            # 获取列信息
+            # 获取列信息 - PRAGMA 不支持参数化查询，但表名已通过验证
             cursor = conn.execute(f"PRAGMA table_info({table_name})")
             columns = [col[1] for col in cursor.fetchall()]
             
-            # 获取数据
+            # 获取数据 - 表名已通过_is_valid_table_name验证
             cursor = conn.execute(f"SELECT * FROM {table_name}")
             data = [tuple(row) for row in cursor.fetchall()]
             
             logger.debug(f"获取表 {table_name} 数据: {len(data)} 行")
             return data, columns
+    
+    def _is_valid_table_name(self, table_name: str) -> bool:
+        """验证表名是否合法"""
+        import re
+        # 表名只能包含字母、数字、下划线
+        return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
     
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
         """执行 SQL 语句"""
@@ -272,7 +282,4 @@ class ConnectionContext:
         return False
 
 
-if __name__ == "__main__":
-    # 测试
-    db = DatabaseManager()
-    print(f"表列表: {db.get_all_tables()}")
+

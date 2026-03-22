@@ -35,6 +35,30 @@ PD_FEATURES_DESC: Dict[str, str] = {
     'VAR': '方差'
 }
 
+# 特征单位定义
+DGA_FEATURES_UNIT: Dict[str, str] = {
+    'H2': 'μL/L',
+    'CH4': 'μL/L',
+    'C2H6': 'μL/L',
+    'C2H4': 'μL/L',
+    'C2H2': 'μL/L'
+}
+
+PD_FEATURES_UNIT: Dict[str, str] = {
+    'BAND1_ENERGY': 'pJ',
+    'BAND2_ENERGY': 'pJ',
+    'BAND3_ENERGY': 'pJ',
+    'BAND4_ENERGY': 'pJ',
+    'KURTOSIS': '',
+    'MAIN_AMP': 'mV',
+    'MAIN_FREQ': 'kHz',
+    'MEAN': 'mV',
+    'PEAK': 'mV',
+    'PULSE_WIDTH': 'μs',
+    'SKEWNESS': '',
+    'VAR': 'mV²'
+}
+
 def _get_pd_features(channel: int) -> List[str]:
     """获取指定通道的PD特征列名"""
     return [
@@ -53,32 +77,37 @@ PD_FEATURES: Dict[str, List[str]] = {
     'PD_CH4': _get_pd_features(4),
 }
 
+def _get_pd_input_config(channel: int) -> Dict:
+    """获取PD输入配置"""
+    features = PD_FEATURES[f'PD_CH{channel}']
+    descriptions = []
+    for f in features:
+        feature_key = f.split('_', 1)[1].upper() if '_' in f else f.upper()
+        desc = PD_FEATURES_DESC.get(feature_key, f)
+        unit = PD_FEATURES_UNIT.get(feature_key, '')
+        if unit:
+            descriptions.append(f"{desc} ({unit})")
+        else:
+            descriptions.append(desc)
+    return {
+        'columns': [f.upper() for f in features],
+        'descriptions': descriptions,
+        'type': f'PD_CH{channel}'
+    }
+
 INPUT_CONFIGS: Dict[str, Dict] = {
     "DGA数据": {
         'columns': DGA_FEATURES,
-        'descriptions': [DGA_FEATURES_DESC.get(f, f) for f in DGA_FEATURES],
+        'descriptions': [
+            f"{DGA_FEATURES_DESC.get(f, f)} ({DGA_FEATURES_UNIT.get(f, '')})"
+            for f in DGA_FEATURES
+        ],
         'type': 'DGA'
     },
-    "PD通道1": {
-        'columns': [f.upper() for f in PD_FEATURES['PD_CH1']],
-        'descriptions': [PD_FEATURES_DESC.get(f.split('_', 1)[1].upper() if '_' in f else f.upper(), f) for f in PD_FEATURES['PD_CH1']],
-        'type': 'PD_CH1'
-    },
-    "PD通道2": {
-        'columns': [f.upper() for f in PD_FEATURES['PD_CH2']],
-        'descriptions': [PD_FEATURES_DESC.get(f.split('_', 1)[1].upper() if '_' in f else f.upper(), f) for f in PD_FEATURES['PD_CH2']],
-        'type': 'PD_CH2'
-    },
-    "PD通道3": {
-        'columns': [f.upper() for f in PD_FEATURES['PD_CH3']],
-        'descriptions': [PD_FEATURES_DESC.get(f.split('_', 1)[1].upper() if '_' in f else f.upper(), f) for f in PD_FEATURES['PD_CH3']],
-        'type': 'PD_CH3'
-    },
-    "PD通道4": {
-        'columns': [f.upper() for f in PD_FEATURES['PD_CH4']],
-        'descriptions': [PD_FEATURES_DESC.get(f.split('_', 1)[1].upper() if '_' in f else f.upper(), f) for f in PD_FEATURES['PD_CH4']],
-        'type': 'PD_CH4'
-    }
+    "PD通道1": _get_pd_input_config(1),
+    "PD通道2": _get_pd_input_config(2),
+    "PD通道3": _get_pd_input_config(3),
+    "PD通道4": _get_pd_input_config(4),
 }
 
 TABLE_CONFIGS: Dict[str, Dict] = {
@@ -164,3 +193,15 @@ PCA_TABLE_MAPPING: Dict[str, str] = {
     'PD_CH3': 'fusion_features_pd_ch3',
     'PD_CH4': 'fusion_features_pd_ch4'
 }
+
+# 关于窗口内容
+ABOUT_CONTENT: str = """
+## 本科毕业设计
+---
+### 基于多源监测数据的电力变压器故障智能诊断系统
+---
+
+**UNIVERSITY_NAME COLLEGE_NAME**  
+**学生**：AUTHOR_NAME（GRADE_INFO）  
+**项目地址**：[https://gitee.com/lcoy/transformer-fault-diagnoser](https://gitee.com/lcoy/transformer-fault-diagnoser)
+"""

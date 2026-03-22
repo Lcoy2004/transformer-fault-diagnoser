@@ -15,7 +15,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QDialog, QSizePolicy, QTextEdit,
+from PySide6.QtWidgets import (QApplication, QDialog, QSizePolicy, QTextBrowser,
     QWidget)
 
 class Ui_Dialog_aboutme(object):
@@ -38,7 +38,7 @@ class Ui_Dialog_aboutme(object):
 "}\n"
 "\n"
 "/* \u6587\u672c\u7f16\u8f91\u6846 - \u4e3b\u5185\u5bb9\u533a */\n"
-"QTextEdit#textEdit {\n"
+"QTextBrowser#textEdit {\n"
 "    background-color: #ffffff;\n"
 "    border: none;\n"
 "    border-radius: 10px;\n"
@@ -51,25 +51,25 @@ class Ui_Dialog_aboutme(object):
 "}\n"
 "\n"
 "/* \u6807\u9898\u6837\u5f0f - \u4f7f\u7528 HTML */\n"
-"QTextEdit#textEdit strong {\n"
+"QTextBrowser#textEdit strong {\n"
 "    color: #1e3a5f;\n"
 "    font-size: 15px;\n"
 "}\n"
 "\n"
-"/* \u94fe\u63a5\u6837\u5f0f */\n"
-""
-                        "QTextEdit#textEdit a {\n"
+"/* \u94fe\u63a5\u6837\u5f0f"
+                        " */\n"
+"QTextBrowser#textEdit a {\n"
 "    color: #1e88e5;\n"
 "    text-decoration: none;\n"
 "}\n"
 "\n"
-"QTextEdit#textEdit a:hover {\n"
+"QTextBrowser#textEdit a:hover {\n"
 "    color: #1976d2;\n"
 "    text-decoration: underline;\n"
 "}\n"
 "\n"
 "")
-        self.textEdit = QTextEdit(Dialog_aboutme)
+        self.textEdit = QTextBrowser(Dialog_aboutme)
         self.textEdit.setObjectName(u"textEdit")
         self.textEdit.setGeometry(QRect(0, 0, 400, 200))
         self.textEdit.setMinimumSize(QSize(400, 200))
@@ -79,7 +79,7 @@ class Ui_Dialog_aboutme(object):
 "        border: 1px solid #d0d7de;\n"
 "        border-radius: 12px;\n"
 "    }\n"
-"    QTextEdit#textEdit {\n"
+"    QTextBrowser#textEdit {\n"
 "        background-color: #ffffff;\n"
 "        border: none;\n"
 "        border-radius: 8px;\n"
@@ -88,6 +88,7 @@ class Ui_Dialog_aboutme(object):
 "        color: #1e293b;\n"
 "    }")
         self.textEdit.setReadOnly(True)
+        self.textEdit.setOpenExternalLinks(True)
 
         self.retranslateUi(Dialog_aboutme)
 

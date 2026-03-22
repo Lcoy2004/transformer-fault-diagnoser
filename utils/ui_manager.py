@@ -37,6 +37,16 @@ class UIManager:
         self._time_timer = QTimer(self._window)
         self._time_timer.timeout.connect(self._update_time)
         self._time_timer.start(1000)
+        
+        # 窗口关闭时停止定时器
+        self._window.destroyed.connect(self._stop_timers)
+    
+    def _stop_timers(self) -> None:
+        """停止定时器"""
+        if hasattr(self, '_notification_timer') and self._notification_timer:
+            self._notification_timer.stop()
+        if hasattr(self, '_time_timer') and self._time_timer:
+            self._time_timer.stop()
     
     def _update_notification(self) -> None:
         """更新通知标签"""

@@ -258,7 +258,3 @@ def train_pca_model(
         raise
 
 
-if __name__ == "__main__":
-    result = train_pca_model(data_source='database')
-    logger.info("PCA训练完成")
-    print("PCA训练完成")

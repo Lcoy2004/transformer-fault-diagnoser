@@ -43,7 +43,7 @@ FEATURE_NAME_MAP: Dict[str, str] = {
 }
 
 FEATURE_UNIT_MAP: Dict[str, str] = {
-    'h2': 'ppm', 'ch4': 'ppm', 'c2h6': 'ppm', 'c2h4': 'ppm', 'c2h2': 'ppm',
+    'h2': 'μL/L', 'ch4': 'μL/L', 'c2h6': 'μL/L', 'c2h4': 'μL/L', 'c2h2': 'μL/L',
     'band1_energy': 'pJ', 'band2_energy': 'pJ', 'band3_energy': 'pJ', 'band4_energy': 'pJ',
     'kurtosis': '', 'main_amp': 'mV', 'main_freq': 'kHz', 'mean': 'mV',
     'peak': 'mV', 'pulse_width': 'μs', 'skewness': '', 'var': 'mV²'
