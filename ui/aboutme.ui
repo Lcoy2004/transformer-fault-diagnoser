@@ -25,6 +25,51 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+/* ================================================
+   关于对话框 - 现代化简约风格
+   设计理念：专业、简洁、清晰
+   ================================================ */
+
+QDialog#Dialog_aboutme {
+    background-color: #f0f4f8;
+    border: 1px solid #dde2e8;
+    border-radius: 12px;
+}
+
+/* 文本编辑框 - 主内容区 */
+QTextEdit#textEdit {
+    background-color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 20px 24px;
+    selection-background-color: #bbdefb;
+    color: #334155;
+    font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+/* 标题样式 - 使用 HTML */
+QTextEdit#textEdit strong {
+    color: #1e3a5f;
+    font-size: 15px;
+}
+
+/* 链接样式 */
+QTextEdit#textEdit a {
+    color: #1e88e5;
+    text-decoration: none;
+}
+
+QTextEdit#textEdit a:hover {
+    color: #1976d2;
+    text-decoration: underline;
+}
+
+</string>
+  </property>
   <widget class="QTextEdit" name="textEdit">
    <property name="geometry">
     <rect>
