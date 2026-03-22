@@ -248,6 +248,7 @@ class DataImporter:
             if existing_count > 0:
                 logger.warning(f"数据库中已存在 {existing_count} 条来自 {file_name} 的数据")
                 notify(f"数据库中已存在 {existing_count} 条来自 {file_name} 的数据")
+                send_progress_value(100)
                 return existing_count
             
             table_info = TABLE_CONFIGS[table_name]

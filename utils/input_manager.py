@@ -94,11 +94,15 @@ class InputManager:
         data = []
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 1)
-            if item:
+            if item and item.text().strip():
                 try:
                     data.append(float(item.text().strip()))
                 except ValueError:
-                    data.append(0.0)
+                    # 保留原值而不是设为0.0，让用户有机会修正
+                    logger.warning(f"第{row+1}行数据格式无效: '{item.text()}'")
+                    return  # 不缓存无效数据
+            else:
+                data.append(0.0)
         
         self._cache[data_type] = data
         logger.debug(f"缓存数据: {data_type} = {data}")
@@ -111,14 +115,22 @@ class InputManager:
             输入数据列表，如果数据无效返回 None
         """
         data = []
+        invalid_rows = []
+        
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 1)
             if not item or not item.text().strip():
-                return None
+                invalid_rows.append((row, "空值"))
+                continue
             try:
                 data.append(float(item.text().strip()))
             except ValueError:
-                return None
+                invalid_rows.append((row, f"无效格式: '{item.text()}'"))
+        
+        if invalid_rows:
+            for row, reason in invalid_rows:
+                logger.warning(f"第{row+1}行数据{reason}")
+            return None
         
         logger.debug(f"获取输入数据: {data}")
         return data
@@ -209,3 +221,9 @@ class InputManager:
         display_name = self._combobox.currentText()
         config = INPUT_CONFIGS.get(display_name, INPUT_CONFIGS["DGA数据"])
         return config['type']
+    
+    def save_current_to_cache(self) -> None:
+        """保存当前显示的数据到缓存"""
+        current_type = self.get_type()
+        self._cache_current_data_with_type(current_type)
+        self._previous_type = current_type

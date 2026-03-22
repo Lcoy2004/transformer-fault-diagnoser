@@ -118,7 +118,7 @@ class Predictor:
         else:
             raise ValueError("[错误] PD融合模型未加载")
     
-    def predict_multi(self, input_data_dict):
+    def predict_multi(self, input_data_dict, progress_callback=None, progress_value_callback=None):
         """
         决策级融合预测
         
@@ -136,19 +136,31 @@ class Predictor:
                     'PD_CH3': [...],
                     'PD_CH4': [...]
                 }
+            progress_callback: 进度消息回调
+            progress_value_callback: 进度值回调 (0-100)
         
         Returns:
             dict: 预测结果
         """
+        def report_progress(msg, value=None):
+            if progress_callback:
+                progress_callback(msg)
+            if progress_value_callback and value is not None:
+                progress_value_callback(value)
+        
         results = {}
         dga_result = None
         pd_result = None
         
+        report_progress("开始故障诊断...", 10)
+        
         if 'DGA' in input_data_dict and 'DGA' in self.models:
             try:
+                report_progress("正在进行DGA数据分析...", 30)
                 dga_type, dga_location = self.predict_dga(input_data_dict['DGA'])
                 dga_result = (dga_type, dga_location)
                 results['DGA'] = dga_result
+                report_progress(f"DGA分析完成: {dga_type}", 50)
                 logger.info(f"[DGA预测] 故障类型={dga_type}, 故障位置={dga_location}")
             except Exception as e:
                 logger.error(f"[DGA预测失败] {e}")
@@ -156,9 +168,11 @@ class Predictor:
         has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
         if has_pd_data and 'PD_FUSION' in self.models:
             try:
+                report_progress("正在进行PD局放数据分析...", 60)
                 pd_type, pd_location = self.predict_pd_fusion(input_data_dict)
                 pd_result = (pd_type, pd_location)
                 results['PD_FUSION'] = pd_result
+                report_progress(f"PD分析完成: {pd_type}", 80)
                 logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障位置={pd_location}")
             except Exception as e:
                 logger.error(f"[PD融合预测失败] {e}")
@@ -196,6 +210,7 @@ class Predictor:
             raise ValueError("[错误] 没有有效的预测结果")
         
         results['fusion'] = (fusion_type, fusion_location, confidence)
+        report_progress("诊断完成", 100)
         
         return results
     

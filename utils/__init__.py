@@ -15,11 +15,6 @@ from .thread_manager import ThreadManager
 from .ui_manager import UIManager
 from .chart_manager import ChartManager, ChartContainer
 from .predict_manager import PredictManager
-from config.constants import (
-    DGA_FEATURES, DGA_FEATURES_DB, PD_CHANNELS, PD_DB_TABLES,
-    PD_FEATURES, INPUT_CONFIGS, TABLE_CONFIGS, TABLE_TYPE_MAP,
-    LABEL_MAPPING, PD_FINE_LABELS, COLUMN_MAPPING, PCA_TABLE_MAPPING
-)
 from config.helpers import get_models_dir, ensure_models_dir, ProgressHelper
 
 __all__ = [
@@ -36,18 +31,6 @@ __all__ = [
     'ChartManager',
     'ChartContainer',
     'PredictManager',
-    'DGA_FEATURES',
-    'DGA_FEATURES_DB',
-    'PD_CHANNELS',
-    'PD_DB_TABLES',
-    'PD_FEATURES',
-    'INPUT_CONFIGS',
-    'TABLE_CONFIGS',
-    'TABLE_TYPE_MAP',
-    'LABEL_MAPPING',
-    'PD_FINE_LABELS',
-    'COLUMN_MAPPING',
-    'PCA_TABLE_MAPPING',
     'get_models_dir',
     'ensure_models_dir',
     'ProgressHelper'

@@ -39,7 +39,7 @@ QDialog#Dialog_aboutme {
 }
 
 /* 文本编辑框 - 主内容区 */
-QTextEdit#textEdit {
+QTextBrowser#textEdit {
     background-color: #ffffff;
     border: none;
     border-radius: 10px;
@@ -52,25 +52,25 @@ QTextEdit#textEdit {
 }
 
 /* 标题样式 - 使用 HTML */
-QTextEdit#textEdit strong {
+QTextBrowser#textEdit strong {
     color: #1e3a5f;
     font-size: 15px;
 }
 
 /* 链接样式 */
-QTextEdit#textEdit a {
+QTextBrowser#textEdit a {
     color: #1e88e5;
     text-decoration: none;
 }
 
-QTextEdit#textEdit a:hover {
+QTextBrowser#textEdit a:hover {
     color: #1976d2;
     text-decoration: underline;
 }
 
 </string>
   </property>
-  <widget class="QTextEdit" name="textEdit">
+  <widget class="QTextBrowser" name="textEdit">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -97,7 +97,7 @@ QTextEdit#textEdit a:hover {
         border: 1px solid #d0d7de;
         border-radius: 12px;
     }
-    QTextEdit#textEdit {
+    QTextBrowser#textEdit {
         background-color: #ffffff;
         border: none;
         border-radius: 8px;
@@ -107,6 +107,9 @@ QTextEdit#textEdit a:hover {
     }</string>
    </property>
    <property name="readOnly">
+    <bool>true</bool>
+   </property>
+   <property name="openExternalLinks">
     <bool>true</bool>
    </property>
   </widget>

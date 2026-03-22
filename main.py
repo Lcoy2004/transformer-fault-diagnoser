@@ -6,9 +6,12 @@ import logging
 import sys
 import os
 from datetime import datetime
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QVBoxLayout
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QMessageBox, 
+    QFileDialog, QVBoxLayout, QDialog
+)
 
-from config import setup_logging, notify
+from config import setup_logging, notify, ABOUT_CONTENT
 from ui import main_ui, aboutme_ui
 from utils import (
     UIManager, DataProcessor, ThreadManager,
@@ -124,15 +127,15 @@ class MainWindow(QMainWindow):
         try:
             table_name = self._table.get_current_table()
             
-            dialog = QFileDialog(self)
-            dialog.setWindowTitle("选择数据文件")
-            dialog.setNameFilter("Excel文件 (*.xlsx)")
-            dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "选择数据文件",
+                "",
+                "Excel文件 (*.xlsx)"
+            )
             
-            if dialog.exec() != QFileDialog.DialogCode.Accepted:
+            if not file_path:
                 return
-            
-            file_path = dialog.selectedFiles()[0]
             self._ui.clear_output()
             
             worker = self._thread.start(self._data.import_data, file_path, table_name)
@@ -154,30 +157,15 @@ class MainWindow(QMainWindow):
     
     def _show_about(self):
         """显示关于窗口"""
-        from PySide6.QtWidgets import QDialog
-        
         dialog = QDialog(self)
         ui = aboutme_ui.Ui_Dialog_aboutme()
         ui.setupUi(dialog)
         dialog.setWindowTitle("关于")
-        
-        about_content = """
-## 本科毕业设计
----
-### 基于多源监测数据的电力变压器故障智能诊断系统
----
-
-**西南交通大学 电气工程学院**  
-**学生**：欧阳雷灿（本科2022级）  
-**项目地址**：[https://gitee.com/lcoy/transformer-fault-diagnoser](https://gitee.com/lcoy/transformer-fault-diagnoser)
-"""
-        ui.textEdit.setMarkdown(about_content)
+        ui.textEdit.setMarkdown(ABOUT_CONTENT)
         dialog.exec()
     
     def _show_chart(self):
         """显示原始图表窗口"""
-        from PySide6.QtWidgets import QDialog
-        
         dialog = QDialog(self)
         dialog.setWindowTitle("原始数据显示图")
         dialog.resize(900, 700)

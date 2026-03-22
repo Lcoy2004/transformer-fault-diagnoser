@@ -142,18 +142,29 @@ class DataProcessor:
         self._ensure_predictor()
         return self._predictor.predict(input_data, data_type)
     
-    def predict_multi(self, input_data_dict: Dict[str, List[float]]) -> Dict[str, Any]:
+    def predict_multi(
+        self, 
+        input_data_dict: Dict[str, List[float]],
+        progress_callback: Optional[Callable] = None,
+        progress_value_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
         """
         多类型数据融合预测
         
         Args:
             input_data_dict: 输入数据字典 {data_type: [values]}
+            progress_callback: 进度消息回调
+            progress_value_callback: 进度值回调
             
         Returns:
             预测结果字典
         """
         self._ensure_predictor()
-        return self._predictor.predict_multi(input_data_dict)
+        return self._predictor.predict_multi(
+            input_data_dict, 
+            progress_callback=progress_callback,
+            progress_value_callback=progress_value_callback
+        )
     
     def reload_predictor(self) -> None:
         """重新加载预测器"""
@@ -164,11 +175,12 @@ class DataProcessor:
         """确保已初始化"""
         if self._db is None or self._importer is None:
             self._init()
-        assert self._db is not None
-        assert self._importer is not None
+        if self._db is None or self._importer is None:
+            raise RuntimeError("数据处理器初始化失败")
     
     def _ensure_predictor(self) -> None:
         """确保预测器已加载"""
         if self._predictor is None:
             self._predictor = Predictor()
-        assert self._predictor is not None
+        if self._predictor is None:
+            raise RuntimeError("预测器初始化失败")

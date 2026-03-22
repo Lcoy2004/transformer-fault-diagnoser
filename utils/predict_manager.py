@@ -44,6 +44,9 @@ class PredictManager:
     
     def start_predict(self):
         """启动预测"""
+        # 先保存当前显示的数据到缓存
+        self._input.save_current_to_cache()
+        
         all_data = self._input.get_all_cached_data()
         
         if not all_data:
@@ -54,9 +57,11 @@ class PredictManager:
         self._ui.clear_output()
         self._ui.update_output("正在进行故障诊断...")
         self._ui.update_output("=" * 50)
+        self._ui.update_progress(0)
         
         worker = self._thread.start(self._do_predict, all_data)
         worker.progress.connect(self._ui.update_output)
+        worker.progress_value.connect(self._ui.update_progress)
         worker.finished.connect(self._on_predict_done)
         worker.error.connect(self._on_predict_error)
         worker.start()
@@ -86,15 +91,31 @@ class PredictManager:
         try:
             if has_dga and has_valid_pd:
                 result['mode'] = 'fusion'
-                result['data'] = self._data.predict_multi(all_data)
+                result['data'] = self._data.predict_multi(
+                    all_data,
+                    progress_callback=progress_callback,
+                    progress_value_callback=progress_value_callback
+                )
             elif has_dga:
                 result['mode'] = 'dga_only'
                 dga_data = all_data['DGA']
+                if progress_value_callback:
+                    progress_value_callback(10)
+                if progress_callback:
+                    progress_callback("正在进行DGA分析...")
                 fault_type, fault_location = self._data.predict(dga_data, 'DGA')
+                if progress_value_callback:
+                    progress_value_callback(100)
+                if progress_callback:
+                    progress_callback("诊断完成")
                 result['data'] = {'fusion': (fault_type, fault_location, 0.9)}
             else:
                 result['mode'] = 'pd_only'
-                result['data'] = self._data.predict_multi(all_data)
+                result['data'] = self._data.predict_multi(
+                    all_data,
+                    progress_callback=progress_callback,
+                    progress_value_callback=progress_value_callback
+                )
         except Exception as e:
             result['error'] = str(e)
         
@@ -124,6 +145,7 @@ class PredictManager:
             self._display_pd_result(data)
         
         self._ui.update_output("\n" + "=" * 50)
+        self._ui.update_progress(100)
         self._notify("诊断完成")
     
     def _display_fusion_result(self, data: Dict[str, Any]):
@@ -149,11 +171,12 @@ class PredictManager:
         """显示DGA预测结果"""
         self._ui.update_output("\n[DGA预测模式] 仅DGA数据")
 
-        if 'DGA' in data:
-            dga_type, dga_location = data['DGA']
+        if 'fusion' in data:
+            dga_type, dga_location, confidence = data['fusion']
             self._ui.update_output("\n" + "-" * 40)
             self._ui.update_output(f"诊断结果: {dga_type}")
             self._ui.update_output(f"故障位置: {dga_location if dga_location else '未知'}")
+            self._ui.update_output(f"置信度: {confidence:.0%}")
     
     def _display_pd_result(self, data: Dict[str, Any]):
         """显示PD预测结果"""
@@ -168,5 +191,6 @@ class PredictManager:
     def _on_predict_error(self, error_msg: str):
         """预测失败"""
         self._set_buttons(True)
+        self._ui.update_progress(0)
         logger.error(f"预测失败: {error_msg}")
         QMessageBox.warning(self._parent, "错误", f"预测失败: {error_msg}")
