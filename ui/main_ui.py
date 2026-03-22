@@ -30,7 +30,7 @@ class Ui_MainWindow(object):
         MainWindow.resize(1000, 800)
         MainWindow.setMinimumSize(QSize(1000, 800))
         icon = QIcon()
-        icon.addFile(u":/icon.ico", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setStyleSheet(u"\n"
 "/* ================================================\n"
