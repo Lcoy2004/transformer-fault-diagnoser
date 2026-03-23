@@ -100,9 +100,11 @@ class PredictManager:
                 result['mode'] = 'dga_only'
                 dga_data = all_data['DGA']
                 if progress_value_callback:
-                    progress_value_callback(10)
+                    progress_value_callback(20)
                 if progress_callback:
                     progress_callback("正在进行DGA分析...")
+                if progress_value_callback:
+                    progress_value_callback(60)
                 fault_type, fault_location = self._data.predict(dga_data, 'DGA')
                 if progress_value_callback:
                     progress_value_callback(100)

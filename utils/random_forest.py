@@ -80,7 +80,9 @@ def train_random_forest(
             
             for ch_table in pd_channels:
                 try:
-                    ch_query = f"SELECT sample_id, principal_components, fault_type, fault_location FROM {ch_table}"
+                    cols = ['sample_id', 'principal_components', 'fault_type', 'fault_location']
+                    cols_str = ', '.join(cols)
+                    ch_query = f"SELECT {cols_str} FROM {ch_table}"
                     df_ch = pd.read_sql_query(ch_query, conn)
                     
                     if not df_ch.empty:
