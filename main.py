@@ -107,9 +107,9 @@ class MainWindow(QMainWindow):
     def _show_log(self):
         """显示日志"""
         try:
+            from config.logging import get_logs_dir
             log_file = os.path.join(
-                os.path.dirname(__file__),
-                "logs",
+                get_logs_dir(),
                 f"{datetime.now():%Y%m%d}.log"
             )
             
