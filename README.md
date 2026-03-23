@@ -28,44 +28,14 @@ TransformerFaultDiagnoser 是一款专业的变压器故障诊断软件，采用
 ```
 TransformerFaultDiagnoser/
 ├── config/              # 配置模块
-│   ├── logging.py      # 日志配置
-│   ├── notification.py # 通知管理
-│   ├── constants.py    # 常量定义
-│   └── helpers.py      # 辅助工具
-├── database/           # 数据库模块
-│   └── db_manager.py   # SQLite数据库管理
-├── models/             # 训练好的模型
-│   ├── pca_model.pkl   # PCA降维模型
-│   ├── random_forest_multioutput_model.pkl  # 随机森林模型
-│   └── scaler.pkl      # 数据标准化器
-├── ui/                 # UI界面模块
-│   ├── mainui.ui       # Qt UI定义
-│   ├── mainui_ui.py    # UI生成代码
-│   ├── aboutme.ui      # 关于对话框
-│   └── chart_container.ui  # 图表容器
-├── utils/              # 工具模块
-│   ├── random_forest.py  # 随机森林训练与预测
-│   ├── train_pca.py      # PCA模型训练
-│   ├── data_processor.py # 数据处理
-│   ├── predictor.py      # 预测器
-│   ├── data_importer.py  # 数据导入
-│   ├── model_manager.py  # 模型管理
-│   ├── table_manager.py  # 表格管理
-│   ├── input_manager.py  # 输入管理
-│   ├── predict_manager.py # 预测管理
-│   ├── chart_manager.py  # 图表管理
-│   ├── ui_manager.py     # UI管理
-│   └── thread_manager.py # 线程管理
-├── data/               # 数据目录
-│   ├── DGA_data.xlsx  # 油色谱样本数据
-│   └── pd_features_with_location.xlsx  # 放电特征数据
-├── test/               # 测试模块
-│   ├── test_main_gui.py # GUI测试
-│   └── test_pd_import.py # 导入测试
-├── resources/          # 资源文件
-│   ├── icon.ico        # 应用图标
-│   └── resources.qrc  # Qt资源定义
-└── main.py             # 主程序入口
+├── database/            # 数据库模块
+├── models/              # 训练好的模型
+├── ui/                  # UI界面模块
+├── utils/               # 工具模块
+├── data/                # 数据目录
+├── test/                # 测试模块
+├── resources/           # 资源文件
+└── main.py              # 主程序入口
 ```
 
 ### 技术栈
@@ -104,10 +74,15 @@ TransformerFaultDiagnoser/
 - **train_pca.py**: PCA降维模块，用于特征提取和降维
 - **thread_manager.py**: 线程管理模块，处理后台任务
 - **chart_manager.py**: 图表管理模块，提供数据可视化功能
+- **input_manager.py**: 输入管理模块，处理用户输入数据
+- **predict_manager.py**: 预测管理模块，协调预测流程
+- **model_manager.py**: 模型管理模块，管理模型训练和加载
+- **table_manager.py**: 表格管理模块，处理数据表格显示
+- **ui_manager.py**: UI管理模块，协调界面更新
 
 ### main.py
 
-主程序入口，包含GUI主窗口。
+主程序入口，包含GUI主窗口类。
 
 ## 安装教程
 
@@ -178,20 +153,6 @@ python main.py
 
 - 诊断完成后可导出详细的诊断报告
 - 报告包含原始数据、诊断结果、图表分析
-
-## 目录结构说明
-
-| 目录/文件 | 说明 |
-|-----------|------|
-| config/ | 系统配置，包含日志和通知管理 |
-| database/ | 数据库操作，存储样本数据和诊断记录 |
-| models/ | 训练好的机器学习模型 |
-| ui/ | Qt用户界面定义 |
-| utils/ | 核心算法工具（PCA、随机森林）及各功能模块 |
-| data/ | 原始数据文件 |
-| test/ | 测试代码 |
-| resources/ | 应用资源文件 |
-| logs/ | 运行日志 |
 
 ## 参与贡献
 
