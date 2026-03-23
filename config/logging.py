@@ -4,8 +4,24 @@
 
 import logging
 import os
+import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+
+
+def get_logs_dir() -> str:
+    """
+    获取日志目录的绝对路径
+    
+    Returns:
+        str: 日志目录的绝对路径
+    """
+    if getattr(sys, 'frozen', False):
+        # 打包后：从可执行文件所在目录找
+        return os.path.join(os.path.dirname(sys.executable), 'logs')
+    else:
+        # 开发时：从当前工作目录找
+        return os.path.join(os.getcwd(), 'logs')
 
 
 def setup_logging(log_dir: str = 'logs', level: int = logging.DEBUG) -> None:
@@ -16,11 +32,14 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.DEBUG) -> None:
         log_dir: 日志目录，默认为 'logs'
         level: 日志级别，默认为 DEBUG
     """
-    # 创建日志目录
-    os.makedirs(log_dir, exist_ok=True)
+    if getattr(sys, 'frozen', False):
+        actual_log_dir = os.path.join(os.path.dirname(sys.executable), log_dir)
+    else:
+        actual_log_dir = os.path.join(os.getcwd(), log_dir)
     
-    # 日志文件路径
-    log_file = os.path.join(log_dir, f'{datetime.now():%Y%m%d}.log')
+    os.makedirs(actual_log_dir, exist_ok=True)
+    
+    log_file = os.path.join(actual_log_dir, f'{datetime.now():%Y%m%d}.log')
     
     # 配置根日志记录器
     root_logger = logging.getLogger()

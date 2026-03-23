@@ -3,7 +3,7 @@
 # TransformerFaultDiagnoser
 
 <p align="center">
-  <img src="resources/icon.ico" alt="TransformerFaultDiagnoser Logo" width="128" height="128"/>
+  <img src="resources/icon.svg" alt="TransformerFaultDiagnoser Logo" width="128" height="128"/>
   <br>
   <strong>变压器故障诊断系统</strong>
   <br>
