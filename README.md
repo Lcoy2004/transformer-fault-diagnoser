@@ -1,172 +1,137 @@
-
-
 # TransformerFaultDiagnoser
 
 <p align="center">
-  <img src="resources/icon.svg" alt="TransformerFaultDiagnoser Logo" width="128" height="128"/>
+  <img src="resources/icon.svg" alt="TransformerFaultDiagnoser" width="128"/>
   <br>
-  <strong>变压器故障诊断系统</strong>
+  <strong>基于多源监测数据的电力变压器故障智能诊断系统</strong>
   <br>
-  基于油色谱分析（DGA）和机器学习算法的智能诊断工具
 </p>
+
+---
 
 ## 项目简介
 
-TransformerFaultDiagnoser 是一款专业的变压器故障诊断软件，采用油色谱分析（DGA）技术结合机器学习算法（PCA降维 + 随机森林分类），实现对变压器故障类型、位置和置信度的智能诊断。
+本项目是一款变压器故障诊断软件，采用**油色谱分析（DGA）**和**局部放电（PD）监测**技术，结合**PCA降维**和**随机森林分类**算法，实现对变压器故障类型、位置的智能诊断。
 
-### 主要功能
+### 核心特性
 
-- **数据导入**：支持油色谱数据、高频放电数据、特高频放电数据的导入和管理
-- **特征提取**：提供PCA降维和特征融合功能，提取关键故障特征
-- **模型训练**：基于随机森林算法训练故障分类模型
-- **智能诊断**：快速分析待诊断数据，输出故障类型、位置和置信度
-- **可视化分析**：提供PCA贡献率柱状图、样本分布散点图、故障位置示意图
-- **报告导出**：生成详细的诊断报告
+| 特性 | 说明 |
+|------|------|
+| 多源数据融合 | 支持DGA油色谱数据 + PD局部放电数据联合诊断 |
+| 智能算法 | PCA降维 + 随机森林分类 |
+| 三种诊断模式 | 仅DGA / 仅PD / 融合诊断 |
+| 可视化分析 | PCA贡献率图、样本分布图、故障位置图 |
+| 数据管理 | SQLite数据库 + Excel数据导入 |
 
-## 软件架构
+---
+
+## 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| GUI | PySide6 |
+| 数据库 | SQLite3 |
+| 机器学习 | Scikit-learn (PCA, Random Forest) |
+| 数据处理 | Pandas, NumPy |
+| 数据读写 | openpyxl |
+
+---
+
+## 主要功能
+
+1. **数据导入** - 导入DGA油色谱数据、PD局部放电数据（Excel格式）
+2. **PCA降维** - 对四通道PD数据进行主成分分析
+3. **模型训练** - 训练随机森林故障分类模型
+4. **智能诊断** - 三种模式：仅DGA、仅PD、融合诊断
+5. **可视化** - PCA贡献率柱状图、样本分布散点图、诊断结果展示
+6. **日志管理** - 完整的操作日志记录
+
+---
+
+## 诊断模式
+
+| 模式 | 说明 | 适用场景 |
+|------|------|----------|
+| 仅DGA | 仅使用油色谱数据进行故障判断 | 只有油色谱数据 |
+| 仅PD | 仅使用局部放电数据判断放电细类 | 只有PD数据 |
+| 融合诊断 | DGA判断故障大类 + PD细化放电类型 | 两种数据都有 |
+
+---
+
+## 项目结构
 
 ```
 TransformerFaultDiagnoser/
-├── config/              # 配置模块
-├── database/            # 数据库模块
+├── config/              # 配置模块（日志、通知、常量）
+├── database/            # 数据库管理（SQLite）
 ├── models/              # 训练好的模型
-├── ui/                  # UI界面模块
+├── ui/                  # UI界面（PySide6）
 ├── utils/               # 工具模块
-├── data/                # 数据目录
-├── test/                # 测试模块
+│   ├── chart_manager.py     # 可视化图表
+│   ├── data_processor.py   # 数据处理
+│   ├── input_manager.py    # 输入管理
+│   ├── model_manager.py    # 模型管理
+│   ├── predict_manager.py  # 预测管理
+│   ├── predictor.py        # 预测器
+│   ├── random_forest.py    # 随机森林算法
+│   ├── table_manager.py    # 表格管理
+│   ├── thread_manager.py   # 线程管理
+│   └── train_pca.py        # PCA降维
 ├── resources/           # 资源文件
-└── main.py              # 主程序入口
+├── data/                # 数据目录
+├── logs/                # 日志目录
+├── main.py              # 主程序入口
+└── README.md
 ```
 
-### 技术栈
+---
 
-- **GUI框架**: PySide6
-- **数据库**: SQLite3
-- **机器学习**: Scikit-learn (PCA, Random Forest)
-- **数据处理**: Pandas, NumPy
-- **数据读写**: openpyxl
-
-## 核心模块说明
-
-### config 模块
-
-系统配置模块，定义常量及辅助函数。
-
-- **constants.py**: 提供PD特征定义和常量配置
-- **helpers.py**: 进度辅助类和目录工具
-- **notification.py**: 通知管理器类
-- **logging.py**: 日志配置
-
-### database 模块
-
-数据库管理模块，负责SQLite数据库操作。
-
-- **db_manager.py**: 数据库管理器类，包含数据表的创建、查询、导入等功能
-
-### utils 模块
-
-核心算法工具及功能模块。
-
-- **data_importer.py**: 数据导入模块，处理Excel数据导入
-- **data_processor.py**: 数据处理模块，整合数据导入、处理、训练和预测功能
-- **predictor.py**: 预测器模块，加载训练好的模型进行故障预测
-- **random_forest.py**: 随机森林模块，用于模型训练和故障预测
-- **train_pca.py**: PCA降维模块，用于特征提取和降维
-- **thread_manager.py**: 线程管理模块，处理后台任务
-- **chart_manager.py**: 图表管理模块，提供数据可视化功能
-- **input_manager.py**: 输入管理模块，处理用户输入数据
-- **predict_manager.py**: 预测管理模块，协调预测流程
-- **model_manager.py**: 模型管理模块，管理模型训练和加载
-- **table_manager.py**: 表格管理模块，处理数据表格显示
-- **ui_manager.py**: UI管理模块，协调界面更新
-
-### main.py
-
-主程序入口，包含GUI主窗口类。
-
-## 安装教程
+## 安装
 
 ### 环境要求
 
 - Python 3.13+
-- PySide6
-- pandas
-- numpy
-- scikit-learn
-- openpyxl
+- Windows / Linux
 
-### 安装步骤
+### 依赖安装
 
-1. 克隆项目到本地：
-```bash
-git clone https://gitee.com/lcoy/transformer-fault-diagnoser.git
-cd transformer-fault-diagnoser
-```
-
-2. 创建并激活虚拟环境（推荐）：
-```bash
-python -m venv venv
-```
-
-3. 激活虚拟环境：
-   - Windows: `venv\Scripts\activate`
-   - Linux/Mac: `source venv/bin/activate`
-
-4. 安装依赖包：
 ```bash
 pip install PySide6 pandas numpy scikit-learn openpyxl
 ```
 
-5. 运行主程序：
+### 运行
+
 ```bash
 python main.py
 ```
 
-首次运行时，数据导入功能会自动创建数据库。
+---
 
-## 使用说明
+## 使用流程
 
-### 1. 数据导入
+```
+数据导入 → PCA降维（PD数据） → 模型训练 → 智能诊断 → 查看结果
+```
 
-- 点击工具栏中的「油色谱」按钮导入DGA数据
-- 支持Excel格式的油色谱数据文件
-- 数据将自动存储到SQLite数据库中
+1. **导入数据** - 点击「导入数据」导入Excel数据
+2. **PCA降维** - 对PD数据进行降维处理
+3. **训练模型** - 点击「训练判断模型」训练随机森林
+4. **智能诊断** - 输入待诊断数据，点击「智能判断」
+5. **查看结果** - 查看故障类型、位置、置信度
 
-### 2. 特征提取
+---
 
-- **PCA降维**：对高维特征进行降维处理，保留主要信息
-- **特征融合**：整合多种特征，提高诊断准确性
+## 软件界面
 
-### 3. 模型训练
+### 主界面功能区
 
-- 点击「训练模型」按钮开始训练随机森林分类模型
-- 训练过程中可查看进度条
-- 训练完成后模型会自动保存
+- **数据表格** - 显示数据库中的训练/诊断数据
+- **输入区域** - 输入待诊断数据（DGA/PD）
+- **操作按钮** - 导入数据、PCA降维、训练模型、智能判断
+- **结果显示** - 输出诊断结果、故障类型、位置、置信度
 
-### 4. 故障诊断
+### 可视化图表
 
-- 导入待诊断的变压器数据
-- 点击「开始诊断」按钮
-- 查看诊断结果：故障类型、故障位置、置信度
-
-### 5. 报告导出
-
-- 诊断完成后可导出详细的诊断报告
-- 报告包含原始数据、诊断结果、图表分析
-
-## 参与贡献
-
-1. Fork 本仓库
-2. 新建特性分支 (`git checkout -b feat/xxx`)
-3. 提交更改 (`git commit -m 'Add xxx'`)
-4. 推送分支 (`git push origin feat/xxx`)
-5. 新建 Pull Request
-
-## 许可证
-
-本项目仅供学习和研究使用。
-
-## 联系方式
-
-- 项目地址：https://gitee.com/lcoy/transformer-fault-diagnoser
-- 问题反馈：https://gitee.com/lcoy/transformer-fault-diagnoser/issues
+- **PCA贡献率图** - 显示各主成分的方差贡献率
+- **样本分布图** - 显示二维PCA空间的样本分布
+- **诊断结果图** - 显示故障位置示意图
