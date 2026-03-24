@@ -2,10 +2,11 @@
 日志配置模块
 """
 
+import glob
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 
@@ -22,6 +23,41 @@ def get_logs_dir() -> str:
     else:
         # 开发时：从当前工作目录找
         return os.path.join(os.getcwd(), 'logs')
+
+
+def clean_old_logs(log_dir: str = 'logs', days: int = 30) -> int:
+    """
+    清理过期的日志文件
+    
+    Args:
+        log_dir: 日志目录
+        days: 保留天数，默认30天
+    
+    Returns:
+        int: 删除的文件数量
+    """
+    if getattr(sys, 'frozen', False):
+        actual_log_dir = os.path.join(os.path.dirname(sys.executable), log_dir)
+    else:
+        actual_log_dir = os.path.join(os.getcwd(), log_dir)
+    
+    if not os.path.exists(actual_log_dir):
+        return 0
+    
+    cutoff_date = datetime.now() - timedelta(days=days)
+    deleted_count = 0
+    
+    pattern = os.path.join(actual_log_dir, '*.log')
+    for log_file in glob.glob(pattern):
+        try:
+            file_time = datetime.fromtimestamp(os.path.getmtime(log_file))
+            if file_time < cutoff_date:
+                os.remove(log_file)
+                deleted_count += 1
+        except Exception:
+            pass
+    
+    return deleted_count
 
 
 def setup_logging(log_dir: str = 'logs', level: int = logging.DEBUG) -> None:
@@ -68,6 +104,9 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.DEBUG) -> None:
     )
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
+    
+    # 清理30天前的日志
+    clean_old_logs(log_dir, days=30)
     
     # 添加处理器
     root_logger.addHandler(file_handler)

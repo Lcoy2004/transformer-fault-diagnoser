@@ -3,7 +3,7 @@
 配置模块：包含日志配置、通知功能和常量定义
 """
 
-from .logging import setup_logging
+from .logging import setup_logging, clean_old_logs
 from .notification import (
     notify,
     get_notification,
@@ -21,6 +21,7 @@ from .helpers import get_models_dir, ensure_models_dir, ProgressHelper
 
 __all__ = [
     'setup_logging',
+    'clean_old_logs',
     'notify',
     'get_notification',
     'get_notification_with_time',
