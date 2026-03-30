@@ -92,20 +92,22 @@ class InputManager:
     def _cache_current_data_with_type(self, data_type: str) -> None:
         """缓存当前输入数据到指定类型"""
         data = []
+        has_invalid = False
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 1)
             if item and item.text().strip():
                 try:
                     data.append(float(item.text().strip()))
                 except ValueError:
-                    # 保留原值而不是设为0.0，让用户有机会修正
                     logger.warning(f"第{row+1}行数据格式无效: '{item.text()}'")
-                    return  # 不缓存无效数据
+                    has_invalid = True
+                    break
             else:
                 data.append(0.0)
         
-        self._cache[data_type] = data
-        logger.debug(f"缓存数据: {data_type} = {data}")
+        if not has_invalid:
+            self._cache[data_type] = data
+            logger.debug(f"缓存数据: {data_type} = {data}")
     
     def get_data(self) -> Optional[List[float]]:
         """

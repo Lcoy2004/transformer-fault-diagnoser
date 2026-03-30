@@ -36,10 +36,7 @@ def clean_old_logs(log_dir: str = 'logs', days: int = 30) -> int:
     Returns:
         int: 删除的文件数量
     """
-    if getattr(sys, 'frozen', False):
-        actual_log_dir = os.path.join(os.path.dirname(sys.executable), log_dir)
-    else:
-        actual_log_dir = os.path.join(os.getcwd(), log_dir)
+    actual_log_dir = get_logs_dir() if log_dir == 'logs' else log_dir
     
     if not os.path.exists(actual_log_dir):
         return 0
@@ -68,11 +65,7 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.DEBUG) -> None:
         log_dir: 日志目录，默认为 'logs'
         level: 日志级别，默认为 DEBUG
     """
-    if getattr(sys, 'frozen', False):
-        actual_log_dir = os.path.join(os.path.dirname(sys.executable), log_dir)
-    else:
-        actual_log_dir = os.path.join(os.getcwd(), log_dir)
-    
+    actual_log_dir = get_logs_dir() if log_dir == 'logs' else log_dir
     os.makedirs(actual_log_dir, exist_ok=True)
     
     log_file = os.path.join(actual_log_dir, f'{datetime.now():%Y%m%d}.log')
