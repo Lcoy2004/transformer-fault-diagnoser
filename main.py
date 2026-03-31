@@ -184,6 +184,7 @@ def main():
     setup_logging()
     
     app = QApplication(sys.argv)
+    app.setApplicationName("TransformerFaultDiagnoser")
     notify("程序已启动")
     
     window = MainWindow()
@@ -191,7 +192,11 @@ def main():
     
     logger.info(f"程序启动: {datetime.now():%Y-%m-%d %H:%M:%S}")
     
-    sys.exit(app.exec())
+    try:
+        sys.exit(app.exec())
+    except Exception as e:
+        logger.error(f"程序异常退出: {e}")
+        raise
 
 
 if __name__ == "__main__":

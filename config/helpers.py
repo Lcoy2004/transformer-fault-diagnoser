@@ -16,7 +16,7 @@ def get_models_dir() -> str:
     Returns:
         模型目录路径
     """
-    if hasattr(sys, '_MEIPASS'):
+    if getattr(sys, 'frozen', False):
         return os.path.join(os.path.dirname(sys.executable), 'models')
     else:
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

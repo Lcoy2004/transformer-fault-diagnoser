@@ -58,7 +58,7 @@ class Predictor:
             
         except Exception as e:
             logger.error(f"[错误] 加载模型失败: {e}")
-            raise
+            # 不抛出异常，允许程序继续运行（只是没有预测能力）
     
     def predict_dga(self, input_data):
         """
