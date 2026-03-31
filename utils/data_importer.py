@@ -124,28 +124,22 @@ class DataImporter:
         Returns:
             int: 导入的记录数
         """
-        def send_notification(message):
+        def notify_progress(message, value=None):
             if progress_callback:
                 progress_callback(message)
             else:
                 notify(message)
-        
-        def send_progress_value(value):
-            if progress_value_callback:
+            if value is not None and progress_value_callback:
                 progress_value_callback(value)
         
         try:
-            send_notification(f"开始导入数据到表: {table_name}")
-            send_progress_value(0)
+            notify_progress(f"开始导入数据到表: {table_name}", 0)
             
             df = pd.read_excel(excel_file)
-            logger.info(f"成功读取Excel文件: {excel_file}")
-            send_notification(f"成功读取Excel文件: {excel_file}")
-            send_progress_value(10)
+            notify_progress(f"成功读取Excel文件: {excel_file}", 10)
             
             logger.info(f"数据形状: {df.shape}")
-            send_notification(f"数据形状: {df.shape}")
-            send_progress_value(20)
+            notify_progress(f"数据形状: {df.shape}", 20)
             
             original_columns = df.columns.tolist()
             df.columns = [self._map_column_name(col.strip()) for col in df.columns]
@@ -163,13 +157,12 @@ class DataImporter:
                         imported_count = self._import_data_to_db(df, channel_table, excel_file, progress_callback, progress_value_callback)
                         total_imported += imported_count
                         logger.info(f"成功导入 {imported_count} 条记录到表 {channel_table}")
-                        send_notification(f"成功导入 {imported_count} 条记录到表 {channel_table}")
+                        notify_progress(f"成功导入 {imported_count} 条记录到表 {channel_table}")
                     else:
                         logger.warning(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
-                        send_notification(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
+                        notify_progress(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
                 
-                send_progress_value(100)
-                send_notification(f"局部放电数据导入完成，共导入 {total_imported} 条记录")
+                notify_progress(f"局部放电数据导入完成，共导入 {total_imported} 条记录", 100)
                 return total_imported
             else:
                 is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)
@@ -177,17 +170,15 @@ class DataImporter:
                 if not is_valid:
                     error_msg = f"缺少必要的列: {', '.join(missing_columns)}"
                     logger.error(error_msg)
-                    send_notification(error_msg)
+                    notify_progress(error_msg)
                     raise ValueError(error_msg)
                 
                 logger.info(f"找到必要的列: {found_columns}")
-                send_notification(f"找到必要的列: {found_columns}")
-                send_progress_value(30)
+                notify_progress(f"找到必要的列: {found_columns}", 30)
                 
                 imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
                 
-                send_notification(f"成功导入 {imported_count} 条记录到表 {table_name}")
-                send_progress_value(100)
+                notify_progress(f"成功导入 {imported_count} 条记录到表 {table_name}", 100)
                 
                 logger.info(f"导入完成: {imported_count} 条记录")
                 return imported_count
@@ -195,7 +186,7 @@ class DataImporter:
         except Exception as e:
             error_msg = f"导入数据到表 {table_name} 失败: {e}"
             logger.error(error_msg)
-            send_notification(error_msg)
+            notify_progress(error_msg)
             raise
     
     def _map_column_name(self, col_name):
