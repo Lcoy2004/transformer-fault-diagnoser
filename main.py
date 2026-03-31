@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
     QFileDialog, QVBoxLayout, QDialog
 )
 
-from config import setup_logging, notify, ABOUT_CONTENT
-from ui import main_ui, aboutme_ui
+from config import setup_logging, notify, ABOUT_CONTENT, HELP_CONTENT
+from ui import main_ui, aboutme_ui, guide_ui
 from utils import (
     UIManager, DataProcessor, ThreadManager,
     InputManager, TableManager, ModelManager, ChartContainer, PredictManager
@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
         self.ui.showlog_btn.clicked.connect(self._show_log)
         
         self.ui.action_6.triggered.connect(self._import_data)
+        self.ui.action_7.triggered.connect(self._show_help)
         self.ui.action_8.triggered.connect(self._show_about)
         self.ui.action.triggered.connect(self._show_chart)
         
@@ -162,6 +163,18 @@ class MainWindow(QMainWindow):
         ui.setupUi(dialog)
         dialog.setWindowTitle("关于")
         ui.textEdit.setMarkdown(ABOUT_CONTENT)
+        dialog.exec()
+    
+    def _show_help(self):
+        """显示操作说明窗口"""
+        dialog = QDialog(self)
+        ui = guide_ui.Ui_Dialog_guide()
+        ui.setupUi(dialog)
+        dialog.setWindowTitle("操作说明")
+        
+        # 使用内嵌的操作说明内容（打包后无需外部文件）
+        ui.textEdit.setMarkdown(HELP_CONTENT)
+        
         dialog.exec()
     
     def _show_chart(self):

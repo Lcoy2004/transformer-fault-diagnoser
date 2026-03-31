@@ -15,7 +15,7 @@ from .constants import (
     PD_CHANNELS, PD_DB_TABLES, PD_FEATURES_UNIT,
     PD_FEATURES, INPUT_CONFIGS, TABLE_CONFIGS, TABLE_TYPE_MAP,
     LABEL_MAPPING, PD_FINE_LABELS, COLUMN_MAPPING, PCA_TABLE_MAPPING,
-    ABOUT_CONTENT
+    ABOUT_CONTENT, HELP_CONTENT
 )
 from .helpers import get_models_dir, ensure_models_dir, ProgressHelper
 
@@ -41,6 +41,7 @@ __all__ = [
     'COLUMN_MAPPING',
     'PCA_TABLE_MAPPING',
     'ABOUT_CONTENT',
+    'HELP_CONTENT',
     'get_models_dir',
     'ensure_models_dir',
     'ProgressHelper'
