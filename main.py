@@ -2,12 +2,20 @@
 主程序入口
 """
 
+import os
+os.environ['QT_LOGGING_TO_STDOUT'] = '0'
+os.environ['QT_DEBUG_PLUGINS'] = '0'
+os.environ['QT_SCALE_FACTOR'] = '1'
+
+import warnings
+warnings.filterwarnings('ignore')
+
 import logging
 import sys
-import os
 from datetime import datetime
+from PySide6.QtCore import qInstallMessageHandler
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QMessageBox, 
+    QApplication, QMainWindow, QMessageBox,
     QFileDialog, QVBoxLayout, QDialog
 )
 
@@ -18,14 +26,12 @@ from utils import (
     InputManager, TableManager, ModelManager, ChartContainer, PredictManager
 )
 
-logger = logging.getLogger(__name__)
-
-
 class MainWindow(QMainWindow):
     """主窗口"""
     
     def __init__(self):
         super().__init__()
+        self._logger = logging.getLogger(__name__)
         self._init_ui()
         self._init_managers()
         self._connect_signals()
@@ -90,7 +96,7 @@ class MainWindow(QMainWindow):
             else:
                 notify("刷新表列表失败")
         except Exception as e:
-            logger.error(f"刷新表列表失败: {e}")
+            self._logger.error(f"刷新表列表失败: {e}")
             notify(f"刷新失败: {e}")
     
     def _on_table_changed(self, index: int):
@@ -103,7 +109,7 @@ class MainWindow(QMainWindow):
                 else:
                     QMessageBox.warning(self, "提示", msg)
         except Exception as e:
-            logger.error(f"表选择变化处理失败: {e}")
+            self._logger.error(f"表选择变化处理失败: {e}")
     
     def _show_log(self):
         """显示日志"""
@@ -120,7 +126,7 @@ class MainWindow(QMainWindow):
             
             os.startfile(log_file)
         except Exception as e:
-            logger.error(f"打开日志失败: {e}")
+            self._logger.error(f"打开日志失败: {e}")
             QMessageBox.warning(self, "错误", f"打开日志失败: {e}")
     
     def _import_data(self):
@@ -147,7 +153,7 @@ class MainWindow(QMainWindow):
             worker.start()
             
         except Exception as e:
-            logger.error(f"导入数据失败: {e}")
+            self._logger.error(f"导入数据失败: {e}")
             QMessageBox.warning(self, "错误", f"导入失败: {e}")
     
     def _on_import_done(self, result: int):
@@ -194,9 +200,23 @@ class MainWindow(QMainWindow):
 
 def main():
     """主函数"""
+    from PySide6.QtCore import QMessageLogContext, QtMsgType
+    from PySide6.QtGui import QFont
+
+    def qt_message_handler(msg_type, context, message):
+        if msg_type == QtMsgType.WarningMsg and "QFont" in message:
+            pass
+        elif msg_type == QtMsgType.WarningMsg:
+            pass
+
+    qInstallMessageHandler(qt_message_handler)
+
     setup_logging()
-    
+    logger = logging.getLogger(__name__)
+
     app = QApplication(sys.argv)
+    default_font = QFont("Microsoft YaHei", 10)
+    app.setFont(default_font)
     app.setApplicationName("TransformerFaultDiagnoser")
     notify("程序已启动")
     

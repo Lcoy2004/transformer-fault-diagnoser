@@ -15,14 +15,13 @@ import numpy as np
 from config.constants import PD_CHANNELS
 from config.helpers import get_models_dir
 
-logger = logging.getLogger(__name__)
-
 
 class Predictor:
     """预测器"""
     
     def __init__(self):
         """初始化预测器"""
+        self._logger = logging.getLogger(__name__)
         self.models = {}
         self.scalers = {}
         self.pcas = {}
@@ -40,7 +39,7 @@ class Predictor:
                 if os.path.exists(scaler_path) and os.path.exists(pca_path):
                     self.scalers[data_type] = joblib.load(scaler_path)
                     self.pcas[data_type] = joblib.load(pca_path)
-                    logger.info(f"[加载] {data_type} PCA模型成功")
+                    self._logger.info(f"[加载] {data_type} PCA模型成功")
 
             model_files = {
                 'DGA': 'random_forest_dga_model.pkl',
@@ -51,13 +50,13 @@ class Predictor:
                 model_path = f'{models_dir}/{model_file}'
                 if os.path.exists(model_path):
                     self.models[model_name] = joblib.load(model_path)
-                    logger.info(f"[加载] {model_name} 随机森林模型成功")
+                    self._logger.info(f"[加载] {model_name} 随机森林模型成功")
             
             if not self.models:
-                logger.warning("[警告] 没有找到可用的随机森林模型")
+                self._logger.warning("[警告] 没有找到可用的随机森林模型")
             
         except Exception as e:
-            logger.error(f"[错误] 加载模型失败: {e}")
+            self._logger.error(f"[错误] 加载模型失败: {e}")
             # 不抛出异常，允许程序继续运行（只是没有预测能力）
     
     def predict_dga(self, input_data):
@@ -98,7 +97,7 @@ class Predictor:
                 pca = self.pcas[ch]
                 n_components = pca.n_components_
                 fused_data.append(np.zeros(n_components))
-                logger.warning(f"[警告] {ch} 数据缺失，使用零填充")
+                self._logger.warning(f"[警告] {ch} 数据缺失，使用零填充")
         
         if not any(np.any(d != 0) for d in fused_data):
             raise ValueError("[错误] 没有有效的PD数据")
@@ -161,10 +160,10 @@ class Predictor:
                 dga_result = (dga_type, dga_location)
                 results['DGA'] = dga_result
                 report_progress(f"DGA分析完成: {dga_type}", 50)
-                logger.info(f"[DGA预测] 故障类型={dga_type}, 故障位置={dga_location}")
+                self._logger.info(f"[DGA预测] 故障类型={dga_type}, 故障位置={dga_location}")
             except Exception as e:
-                logger.error(f"[DGA预测失败] {e}")
-        
+                self._logger.error(f"[DGA预测失败] {e}")
+
         has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
         if has_pd_data and 'PD_FUSION' in self.models:
             try:
@@ -173,39 +172,39 @@ class Predictor:
                 pd_result = (pd_type, pd_location)
                 results['PD_FUSION'] = pd_result
                 report_progress(f"PD分析完成: {pd_type}", 80)
-                logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障位置={pd_location}")
+                self._logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障位置={pd_location}")
             except Exception as e:
-                logger.error(f"[PD融合预测失败] {e}")
-        
+                self._logger.error(f"[PD融合预测失败] {e}")
+
         fusion_type = None
         fusion_location = None
         confidence = 0.0
-        
+
         if dga_result and pd_result:
             dga_type, dga_location = dga_result
             pd_type, pd_location = pd_result
-            
+
             if dga_type == '放电':
                 fusion_type = pd_type
                 fusion_location = dga_location
                 confidence = 0.9
-                logger.info("[决策融合] DGA预测为放电，使用PD细化放电类型")
+                self._logger.info("[决策融合] DGA预测为放电，使用PD细化放电类型")
             else:
                 fusion_type = dga_type
                 fusion_location = dga_location
                 confidence = 0.95
-                logger.info(f"[决策融合] DGA预测为{dga_type}，直接采纳")
-        
+                self._logger.info(f"[决策融合] DGA预测为{dga_type}，直接采纳")
+
         elif dga_result:
             fusion_type, fusion_location = dga_result
             confidence = 0.9
-            logger.info("[决策融合] 只有DGA数据，直接使用DGA预测结果")
-        
+            self._logger.info("[决策融合] 只有DGA数据，直接使用DGA预测结果")
+
         elif pd_result:
             fusion_type, fusion_location = pd_result
             confidence = 0.85
-            logger.info("[决策融合] 只有PD数据，使用PD融合预测结果")
-        
+            self._logger.info("[决策融合] 只有PD数据，使用PD融合预测结果")
+
         else:
             raise ValueError("[错误] 没有有效的预测结果")
         
@@ -239,21 +238,21 @@ class Predictor:
             
             if actual_dim != expected_dim:
                 if actual_dim < expected_dim:
-                    logger.warning(f"[警告] 输入维度{actual_dim}小于期望维度{expected_dim}，补零处理")
+                    self._logger.warning(f"[警告] 输入维度{actual_dim}小于期望维度{expected_dim}，补零处理")
                     X_padded = np.zeros((1, expected_dim))
                     X_padded[0, :actual_dim] = X[0]
                     X = X_padded
                 else:
-                    logger.warning(f"[警告] 输入维度{actual_dim}大于期望维度{expected_dim}，截断处理")
+                    self._logger.warning(f"[警告] 输入维度{actual_dim}大于期望维度{expected_dim}，截断处理")
                     X = X[:, :expected_dim]
-            
+
             X_scaled = scaler.transform(X)
             X_pca = pca.transform(X_scaled)
-            
+
             if data_type in self.models:
                 model = self.models[data_type]
                 y_pred = model.predict(X_pca)
-                
+
                 if hasattr(model, 'estimators_'):
                     y_pred = np.array(y_pred)
                     return y_pred[0, 0], y_pred[0, 1]
@@ -261,9 +260,9 @@ class Predictor:
                     return y_pred[0], None
             else:
                 raise ValueError(f"[错误] {data_type} 模型未加载")
-            
+
         except Exception as e:
-            logger.error(f"[预测失败] {e}")
+            self._logger.error(f"[预测失败] {e}")
             raise
     
     def predict(self, input_data, data_type='DGA'):

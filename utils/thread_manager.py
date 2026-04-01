@@ -78,8 +78,12 @@ class ThreadManager:
     def stop(self) -> None:
         """停止当前任务"""
         if self._worker and self._worker.isRunning():
-            self._worker.terminate()
-            self._worker.wait(1000)
+            self._worker.request_interruption()
+            self._worker.quit()
+            self._worker.wait(3000)
+            if self._worker.isRunning():
+                self._worker.terminate()
+                self._worker.wait(1000)
             self._worker = None
     
     @property
