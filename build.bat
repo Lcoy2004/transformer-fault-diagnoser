@@ -73,6 +73,7 @@ echo.
 python -m nuitka ^
     --standalone ^
     --onefile ^
+    --onefile-tempdir-spec=%TEMP%\TransformerFaultDiagnosis_%%PID%% ^
     --windows-console-mode=disable ^
     --windows-icon-from-ico="%~dp0resources\icon.ico" ^
     --company-name="Southwest Jiaotong University" ^
@@ -83,16 +84,15 @@ python -m nuitka ^
     --copyright="Copyright (C) 2026 Ouyang Leican" ^
     --zig ^
     --enable-plugin=pyside6 ^
-    --include-package=sklearn ^
-    --include-package=pandas ^
-    --include-package=numpy ^
-    --include-package=openpyxl ^
-    --include-package=joblib ^
+    --include-module=sklearn ^
+    --include-module=pandas ^
+    --include-module=numpy ^
+    --include-module=openpyxl ^
+    --include-module=joblib ^
     --include-data-dir="%~dp0resources=resources" ^
     --output-dir="%~dp0dist" ^
     --output-filename=TransformerFaultDiagnosis ^
-    --jobs=0 ^
-    --low-memory ^
+    --jobs=4 ^
     --show-progress ^
     --remove-output ^
     "%~dp0main.py"
@@ -107,20 +107,6 @@ if errorlevel 1 (
 )
 
 echo.
-echo [Extra] UPX compression...
-if "%USE_UPX%"=="1" (
-    echo Compressing with UPX...
-    "%UPX_PATH%" --lzma "%~dp0dist\TransformerFaultDiagnosis.exe"
-    if errorlevel 1 (
-        echo UPX compression failed, but program is still usable
-    ) else (
-        echo UPX compression completed
-    )
-) else (
-    echo Skipping UPX compression
-)
-
-echo.
 echo ==========================================
 echo  Build successful!
 echo ==========================================
@@ -131,11 +117,5 @@ echo File size:
 for %%I in ("%~dp0dist\TransformerFaultDiagnosis.exe") do (
     echo   %%~zI bytes
 )
-echo.
-echo Software info:
-echo   Company: Southwest Jiaotong University
-echo   Product: Transformer Fault Diagnosis System
-echo   Version: 1.0.0.0
-echo   Copyright: Copyright (C) 2026 Ouyang Leican
 echo.
 pause
