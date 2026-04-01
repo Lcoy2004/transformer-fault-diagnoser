@@ -3,6 +3,7 @@
 """
 
 import logging
+import re
 import sqlite3
 from pathlib import Path
 from typing import List, Tuple
@@ -247,18 +248,7 @@ class DatabaseManager:
     def _is_valid_table_name(self, table_name: str) -> bool:
         """验证表名是否合法"""
         import re
-        # 表名只能包含字母、数字、下划线
         return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
-    
-    def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
-        """执行 SQL 语句"""
-        with self._connect() as conn:
-            return conn.execute(sql, params)
-    
-    def executemany(self, sql: str, params_list: List[tuple]) -> sqlite3.Cursor:
-        """批量执行 SQL 语句"""
-        with self._connect() as conn:
-            return conn.executemany(sql, params_list)
 
 
 class ConnectionContext:
