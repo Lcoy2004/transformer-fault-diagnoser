@@ -406,13 +406,18 @@ class Ui_MainWindow(object):
         self.action_6 = QAction(MainWindow)
         self.action_6.setObjectName(u"action_6")
         font = QFont()
+        font.setFamilies([u"Microsoft YaHei"])
+        font.setPointSize(10)
         self.action_6.setFont(font)
         self.action_7 = QAction(MainWindow)
         self.action_7.setObjectName(u"action_7")
+        self.action_7.setFont(font)
         self.action_8 = QAction(MainWindow)
         self.action_8.setObjectName(u"action_8")
+        self.action_8.setFont(font)
         self.action = QAction(MainWindow)
         self.action.setObjectName(u"action")
+        self.action.setFont(font)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -421,67 +426,89 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.showtext_label = QLabel(self.centralwidget)
         self.showtext_label.setObjectName(u"showtext_label")
+        font1 = QFont()
+        font1.setFamilies([u"Microsoft YaHei"])
+        font1.setPointSize(10)
+        font1.setWeight(QFont.Medium)
+        self.showtext_label.setFont(font1)
 
         self.gridLayout.addWidget(self.showtext_label, 2, 4, 1, 1)
 
         self.textEdit_output = QTextEdit(self.centralwidget)
         self.textEdit_output.setObjectName(u"textEdit_output")
+        font2 = QFont()
+        font2.setFamilies([u"Microsoft YaHei"])
+        font2.setPointSize(9)
+        self.textEdit_output.setFont(font2)
         self.textEdit_output.setReadOnly(True)
 
         self.gridLayout.addWidget(self.textEdit_output, 6, 4, 1, 3)
 
         self.input_combobox = QComboBox(self.centralwidget)
         self.input_combobox.setObjectName(u"input_combobox")
+        self.input_combobox.setFont(font)
 
         self.gridLayout.addWidget(self.input_combobox, 3, 4, 1, 2)
 
         self.showlog_btn = QPushButton(self.centralwidget)
         self.showlog_btn.setObjectName(u"showlog_btn")
+        self.showlog_btn.setFont(font)
 
         self.gridLayout.addWidget(self.showlog_btn, 2, 5, 1, 1)
 
         self.btn_pca = QPushButton(self.centralwidget)
         self.btn_pca.setObjectName(u"btn_pca")
+        self.btn_pca.setFont(font)
 
         self.gridLayout.addWidget(self.btn_pca, 0, 4, 2, 1)
 
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
+        self.label.setFont(font1)
 
         self.gridLayout.addWidget(self.label, 5, 4, 1, 1)
 
         self.pushButton = QPushButton(self.centralwidget)
         self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setFont(font)
 
         self.gridLayout.addWidget(self.pushButton, 0, 0, 1, 1)
 
         self.btn_pd = QPushButton(self.centralwidget)
         self.btn_pd.setObjectName(u"btn_pd")
-        font1 = QFont()
-        font1.setFamilies([u"Microsoft YaHei"])
-        font1.setBold(True)
-        self.btn_pd.setFont(font1)
+        font3 = QFont()
+        font3.setFamilies([u"Microsoft YaHei"])
+        font3.setPointSize(14)
+        font3.setBold(True)
+        self.btn_pd.setFont(font3)
 
         self.gridLayout.addWidget(self.btn_pd, 2, 6, 2, 1)
 
         self.table_selector = QComboBox(self.centralwidget)
         self.table_selector.addItem("")
         self.table_selector.setObjectName(u"table_selector")
+        self.table_selector.setFont(font)
 
         self.gridLayout.addWidget(self.table_selector, 0, 1, 1, 2)
 
         self.btn_rf = QPushButton(self.centralwidget)
         self.btn_rf.setObjectName(u"btn_rf")
+        self.btn_rf.setFont(font)
 
         self.gridLayout.addWidget(self.btn_rf, 0, 5, 2, 2)
 
         self.showinput_tableWidget = QTableWidget(self.centralwidget)
         self.showinput_tableWidget.setObjectName(u"showinput_tableWidget")
+        font4 = QFont()
+        font4.setFamilies([u"Microsoft YaHei"])
+        font4.setPointSize(12)
+        self.showinput_tableWidget.setFont(font4)
 
         self.gridLayout.addWidget(self.showinput_tableWidget, 4, 4, 1, 3)
 
         self.showdata_tableWidget = QTableWidget(self.centralwidget)
         self.showdata_tableWidget.setObjectName(u"showdata_tableWidget")
+        self.showdata_tableWidget.setFont(font4)
 
         self.gridLayout.addWidget(self.showdata_tableWidget, 1, 0, 6, 3)
 
@@ -494,10 +521,11 @@ class Ui_MainWindow(object):
         self.showtext_label_2.setObjectName(u"showtext_label_2")
         self.showtext_label_2.setMinimumSize(QSize(60, 0))
         self.showtext_label_2.setMaximumSize(QSize(80, 16777215))
-        font2 = QFont()
-        font2.setFamilies([u"Microsoft YaHei"])
-        font2.setWeight(QFont.Medium)
-        self.showtext_label_2.setFont(font2)
+        font5 = QFont()
+        font5.setFamilies([u"Microsoft YaHei"])
+        font5.setPointSize(13)
+        font5.setWeight(QFont.Medium)
+        self.showtext_label_2.setFont(font5)
 
         self.horizontalLayout.addWidget(self.showtext_label_2)
 
@@ -505,10 +533,11 @@ class Ui_MainWindow(object):
         self.notification_label.setObjectName(u"notification_label")
         self.notification_label.setMinimumSize(QSize(180, 20))
         self.notification_label.setMaximumSize(QSize(16777215, 16777215))
-        font3 = QFont()
-        font3.setFamilies([u"Microsoft YaHei"])
-        font3.setWeight(QFont.DemiBold)
-        self.notification_label.setFont(font3)
+        font6 = QFont()
+        font6.setFamilies([u"Microsoft YaHei"])
+        font6.setPointSize(13)
+        font6.setWeight(QFont.DemiBold)
+        self.notification_label.setFont(font6)
 
         self.horizontalLayout.addWidget(self.notification_label)
 
@@ -516,7 +545,11 @@ class Ui_MainWindow(object):
         self.progressBar.setObjectName(u"progressBar")
         self.progressBar.setMinimumSize(QSize(120, 0))
         self.progressBar.setMaximumSize(QSize(120, 20))
-        self.progressBar.setFont(font2)
+        font7 = QFont()
+        font7.setFamilies([u"Microsoft YaHei"])
+        font7.setPointSize(12)
+        font7.setWeight(QFont.Medium)
+        self.progressBar.setFont(font7)
         self.progressBar.setValue(24)
 
         self.horizontalLayout.addWidget(self.progressBar)
@@ -525,7 +558,7 @@ class Ui_MainWindow(object):
         self.showtime_label.setObjectName(u"showtime_label")
         self.showtime_label.setMinimumSize(QSize(140, 0))
         self.showtime_label.setMaximumSize(QSize(100, 16777215))
-        self.showtime_label.setFont(font3)
+        self.showtime_label.setFont(font6)
 
         self.horizontalLayout.addWidget(self.showtime_label)
 
@@ -535,15 +568,18 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
+        self.statusbar.setFont(font2)
         MainWindow.setStatusBar(self.statusbar)
         self.menuBar = QMenuBar(MainWindow)
         self.menuBar.setObjectName(u"menuBar")
+        self.menuBar.setFont(font2)
         self.menuBar.setGeometry(QRect(0, 0, 1000, 43))
         self.menu = QMenu(self.menuBar)
         self.menu.setObjectName(u"menu")
-        font4 = QFont()
-        font4.setFamilies([u"Microsoft YaHei"])
-        self.menu.setFont(font4)
+        font8 = QFont()
+        font8.setFamilies([u"Microsoft YaHei"])
+        font8.setPointSize(13)
+        self.menu.setFont(font8)
         self.menu_2 = QMenu(self.menuBar)
         self.menu_2.setObjectName(u"menu_2")
         MainWindow.setMenuBar(self.menuBar)
