@@ -247,7 +247,6 @@ class DatabaseManager:
     
     def _is_valid_table_name(self, table_name: str) -> bool:
         """验证表名是否合法"""
-        import re
         return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
 
 
