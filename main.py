@@ -200,23 +200,15 @@ class MainWindow(QMainWindow):
 
 def main():
     """主函数"""
-    from PySide6.QtCore import QMessageLogContext, QtMsgType
     from PySide6.QtGui import QFont
 
-    def qt_message_handler(msg_type, context, message):
-        if msg_type == QtMsgType.WarningMsg and "QFont" in message:
-            pass
-        elif msg_type == QtMsgType.WarningMsg:
-            pass
-
-    qInstallMessageHandler(qt_message_handler)
+    qInstallMessageHandler(lambda *args: None)
 
     setup_logging()
     logger = logging.getLogger(__name__)
 
     app = QApplication(sys.argv)
-    default_font = QFont("Microsoft YaHei", 10)
-    app.setFont(default_font)
+    app.setFont(QFont("Microsoft YaHei", 10))
     app.setApplicationName("TransformerFaultDiagnoser")
     notify("程序已启动")
     
@@ -225,11 +217,7 @@ def main():
     
     logger.info(f"程序启动: {datetime.now():%Y-%m-%d %H:%M:%S}")
     
-    try:
-        sys.exit(app.exec())
-    except Exception as e:
-        logger.error(f"程序异常退出: {e}")
-        raise
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

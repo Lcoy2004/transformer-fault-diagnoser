@@ -15,6 +15,13 @@ from config.constants import (
 
 logger = logging.getLogger(__name__)
 
+VALID_TABLES = set(TABLE_CONFIGS.keys())
+
+
+def _validate_table_name(table_name: str) -> bool:
+    """验证表名是否在白名单中"""
+    return table_name in VALID_TABLES
+
 
 class DataImporter:
     """数据导入器"""
@@ -164,24 +171,24 @@ class DataImporter:
                 
                 notify_progress(f"局部放电数据导入完成，共导入 {total_imported} 条记录", 100)
                 return total_imported
-            else:
-                is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)
-                
-                if not is_valid:
-                    error_msg = f"缺少必要的列: {', '.join(missing_columns)}"
-                    logger.error(error_msg)
-                    notify_progress(error_msg)
-                    raise ValueError(error_msg)
-                
-                logger.info(f"找到必要的列: {found_columns}")
-                notify_progress(f"找到必要的列: {found_columns}", 30)
-                
-                imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
-                
-                notify_progress(f"成功导入 {imported_count} 条记录到表 {table_name}", 100)
-                
-                logger.info(f"导入完成: {imported_count} 条记录")
-                return imported_count
+            
+            is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)
+            
+            if not is_valid:
+                error_msg = f"缺少必要的列: {', '.join(missing_columns)}"
+                logger.error(error_msg)
+                notify_progress(error_msg)
+                raise ValueError(error_msg)
+            
+            logger.info(f"找到必要的列: {found_columns}")
+            notify_progress(f"找到必要的列: {found_columns}", 30)
+            
+            imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
+            
+            notify_progress(f"成功导入 {imported_count} 条记录到表 {table_name}", 100)
+            
+            logger.info(f"导入完成: {imported_count} 条记录")
+            return imported_count
             
         except Exception as e:
             error_msg = f"导入数据到表 {table_name} 失败: {e}"
@@ -226,6 +233,9 @@ class DataImporter:
             if progress_value_callback:
                 progress_value_callback(value)
         
+        if not _validate_table_name(table_name):
+            raise ValueError(f"无效的表名: {table_name}")
+        
         conn = self.db_manager.get_connection()
         cursor = conn.cursor()
         
@@ -258,7 +268,7 @@ class DataImporter:
                 current_index = imported_count + 1
                 sample_id = f"{TABLE_TYPE_MAP[table_name]}_{current_index}"
                 
-                params = [sample_id]
+                params: list = [sample_id]
                 
                 for req_col in required_cols:
                     value = None

@@ -19,6 +19,13 @@ from config.helpers import ensure_models_dir, ProgressHelper
 
 logger = logging.getLogger(__name__)
 
+VALID_PCA_TABLES = set(PCA_TABLE_MAPPING.values())
+
+
+def _validate_table_name(table_name: str) -> bool:
+    """验证表名是否在白名单中"""
+    return table_name in VALID_PCA_TABLES
+
 
 def train_random_forest(
     data_source='database',
@@ -80,6 +87,10 @@ def train_random_forest(
             
             for ch_table in pd_channels:
                 try:
+                    if not _validate_table_name(ch_table):
+                        logger.warning(f"无效的表名: {ch_table}")
+                        continue
+                    
                     cols = ['sample_id', 'principal_components', 'fault_type', 'fault_location']
                     cols_str = ', '.join(cols)
                     ch_query = f"SELECT {cols_str} FROM {ch_table}"
@@ -88,7 +99,9 @@ def train_random_forest(
                     if not df_ch.empty:
                         for _, row in df_ch.iterrows():
                             sample_id = row['sample_id']
-                            sample_num = sample_id.split('_')[-1]
+                            if sample_id is None:
+                                continue
+                            sample_num = str(sample_id).split('_')[-1]
                             
                             if sample_num not in pd_data_by_sample:
                                 pd_data_by_sample[sample_num] = {
@@ -176,7 +189,7 @@ def train_random_forest(
         raise
 
 
-def _train_single_model(df, model_name, n_estimators, random_state, progress, logger):
+def _train_single_model(df, model_name, n_estimators, random_state, progress, log):
     """
     训练单个模型
     
@@ -186,7 +199,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         n_estimators: 树的数量
         random_state: 随机种子
         progress: 进度辅助器
-        logger: 日志器
+        log: 日志器
     
     Returns:
         dict: 训练结果
@@ -204,11 +217,11 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             y.append(row['fault_type'])
             fault_locations.append(row.get('fault_location', None))
         except Exception as e:
-            logger.error(f"解析数据失败: {e}")
+            log.error(f"解析数据失败: {e}")
             continue
     
     if not X:
-        logger.warning(f"{model_name} 没有有效数据")
+        log.warning(f"{model_name} 没有有效数据")
         return None
     
     X = np.array(X)
@@ -226,7 +239,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         fault_locations = fault_locations[valid_indices]
         
         if len(X) == 0:
-            logger.warning(f"{model_name} 没有有效的故障位置数据")
+            log.warning(f"{model_name} 没有有效的故障位置数据")
             has_location_data = False
         else:
             y_multi = np.column_stack((y, fault_locations))
@@ -244,18 +257,18 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             rf_model.fit(X_train, y_train_multi)
             
             y_pred_multi = rf_model.predict(X_test)
-            y_test_type = y_test_multi[:, 0]
-            y_test_location = y_test_multi[:, 1]
-            y_pred_type = y_pred_multi[:, 0]
-            y_pred_location = y_pred_multi[:, 1]
+            y_test_type = y_test_multi[:, 0]  # type: ignore
+            y_test_location = y_test_multi[:, 1]  # type: ignore
+            y_pred_type = y_pred_multi[:, 0]  # type: ignore
+            y_pred_location = y_pred_multi[:, 1]  # type: ignore
             
             accuracy_type = accuracy_score(y_test_type, y_pred_type)
             accuracy_location = accuracy_score(y_test_location, y_pred_location)
             overall_accuracy = (accuracy_type + accuracy_location) / 2
             
-            logger.info(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            logger.info(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
-            logger.info(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
+            log.info(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
+            log.info(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
+            log.info(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
             
             progress.send(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
             progress.send(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
@@ -263,7 +276,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             
             model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
             joblib.dump(rf_model, model_path)
-            logger.info(f"{model_name} 模型已保存: {model_path}")
+            log.info(f"{model_name} 模型已保存: {model_path}")
             
             return {
                 'model': rf_model,
@@ -289,12 +302,12 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         y_pred = rf_model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
         
-        logger.info(f"{model_name} 故障类型准确率: {accuracy:.4f}")
+        log.info(f"{model_name} 故障类型准确率: {accuracy:.4f}")
         progress.send(f"{model_name} 故障类型准确率: {accuracy:.4f}")
         
         model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
         joblib.dump(rf_model, model_path)
-        logger.info(f"{model_name} 模型已保存: {model_path}")
+        log.info(f"{model_name} 模型已保存: {model_path}")
         
         return {
             'model': rf_model,
