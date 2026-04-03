@@ -18,7 +18,7 @@ from PySide6.QtCharts import QChartView, QChart, QLineSeries, QScatterSeries, QV
 from PySide6.QtGui import QColor, QPen, QPainter, QFont, QMouseEvent
 
 from database.db_manager import DatabaseManager
-from config.constants import TABLE_CONFIGS, PD_DB_TABLES
+from config.constants import TABLE_CONFIGS
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,8 @@ class ChartManager:
     def get_available_tables(self) -> List[Tuple[str, str]]:
         tables = []
         all_tables = self.db.get_all_tables()
-        for table_name in PD_DB_TABLES:
+        pd_tables = [f'pd_channel_{i}' for i in range(1, 5)]
+        for table_name in pd_tables:
             if table_name in all_tables:
                 config = TABLE_CONFIGS.get(table_name)
                 if config:

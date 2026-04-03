@@ -22,6 +22,13 @@ from config.helpers import ensure_models_dir, ProgressHelper
 
 logger = logging.getLogger(__name__)
 
+VALID_TABLES = set(TABLE_CONFIGS.keys()) | set(PCA_TABLE_MAPPING.values())
+
+
+def _validate_table_name(table_name: str) -> bool:
+    """验证表名是否在白名单中"""
+    return table_name in VALID_TABLES
+
 
 def train_pca_model(
     data_source='database',
@@ -61,8 +68,15 @@ def train_pca_model(
             
             for table_name, config in TABLE_CONFIGS.items():
                 try:
+                    if not _validate_table_name(table_name):
+                        logger.warning(f"无效的表名: {table_name}")
+                        continue
+                    
                     cursor = conn.cursor()
-                    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                    cursor.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                        (table_name,)
+                    )
                     if cursor.fetchone():
                         features = config['features']
                         label_col = config['label_col']
@@ -199,6 +213,9 @@ def train_pca_model(
             
             for table_name in PCA_TABLE_MAPPING.values():
                 try:
+                    if not _validate_table_name(table_name):
+                        logger.warning(f"无效的表名: {table_name}")
+                        continue
                     cursor.execute(f"DELETE FROM {table_name}")
                     logger.info(f"已清空 {table_name} 表")
                 except Exception as e:
@@ -212,6 +229,10 @@ def train_pca_model(
                 
                 if source in PCA_TABLE_MAPPING:
                     table_name = PCA_TABLE_MAPPING[source]
+                    if not _validate_table_name(table_name):
+                        logger.warning(f"无效的表名: {table_name}")
+                        continue
+                    
                     insert_query = f"""
                     INSERT INTO {table_name} 
                     (sample_id, model_id, principal_components, fault_type, fault_location, source_file)
