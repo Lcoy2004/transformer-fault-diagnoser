@@ -79,12 +79,27 @@ TABLE_CONFIGS: Dict[str, Dict] = {
     **{f'pd_channel_{i}': {
         'name': f'通道{i} (PD)', 'type': f'PD_CH{i}',
         'features': PD_FEATURES[f'PD_CH{i}'], 'label_col': 'fault_type', 'location_col': 'fault_location'
+    } for i in range(1, 5)},
+    'fusion_features_dga': {
+        'name': 'DGA降维特征', 'type': 'DGA_PCA',
+        'features': ['pc1', 'pc2', 'pc3', 'pc4', 'pc5'], 'label_col': 'fault_type', 'location_col': 'fault_location',
+        'is_pca': True
+    },
+    **{f'fusion_features_pd_ch{i}': {
+        'name': f'通道{i}降维特征', 'type': f'PD_CH{i}_PCA',
+        'features': ['pc1', 'pc2', 'pc3', 'pc4', 'pc5'], 'label_col': 'fault_type', 'location_col': 'fault_location',
+        'is_pca': True
     } for i in range(1, 5)}
 }
 
 TABLE_TYPE_MAP: Dict[str, str] = {
     'oil_chromatography': 'DGA',
     **{f'pd_channel_{i}': f'PD_CH{i}' for i in range(1, 5)}
+}
+
+TYPE_TO_TABLE_MAP: Dict[str, str] = {
+    'DGA': 'oil_chromatography',
+    **{f'PD_CH{i}': f'pd_channel_{i}' for i in range(1, 5)}
 }
 
 LABEL_MAPPING: Dict[str, Dict[str, str]] = {

@@ -17,7 +17,33 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>操作说明</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+/* ================================================
+   操作说明对话框 - 现代化工业风格
+   设计理念：简洁、专业、信息层次清晰
+   主色调：深蓝灰 (#1E293B)
+   强调色：科技蓝 (#3B82F6)
+   ================================================ */
+
+QDialog {
+    background-color: #F8FAFC;
+}
+
+QTextEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 20px;
+    selection-background-color: #DBEAFE;
+    color: #334155;
+    font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.8;
+}
+</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">

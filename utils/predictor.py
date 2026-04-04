@@ -206,7 +206,17 @@ class Predictor:
             self._logger.info("[决策融合] 只有PD数据，使用PD融合预测结果")
 
         else:
-            raise ValueError("[错误] 没有有效的预测结果")
+            missing_models = []
+            if 'DGA' in input_data_dict and 'DGA' not in self.models:
+                missing_models.append("DGA模型")
+            has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
+            if has_pd_data and 'PD_FUSION' not in self.models:
+                missing_models.append("PD融合模型")
+            
+            if missing_models:
+                raise ValueError(f"[错误] 以下模型未加载，请先训练: {', '.join(missing_models)}")
+            else:
+                raise ValueError("[错误] 没有有效的预测结果")
         
         results['fusion'] = (fusion_type, fusion_location, confidence)
         report_progress("诊断完成", 100)

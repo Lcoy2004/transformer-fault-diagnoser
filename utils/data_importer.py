@@ -118,16 +118,17 @@ class DataImporter:
         is_valid = len(missing_columns) == 0
         return is_valid, missing_columns, found_columns
     
-    def import_to_table(self, excel_file, table_name, progress_callback=None, progress_value_callback=None):
+    def import_to_table(self, excel_file, table_name, progress_callback=None, progress_value_callback=None, pre_read_df=None):
         """
         导入数据到指定表
         
         Args:
-            excel_file: Excel文件路径
-            table_name: 表名
-            progress_callback: 进度回调函数
-            progress_value_callback: 进度值回调函数
-        
+            excel_file: Excel 文件路径
+            table_name: 目标表名
+            progress_callback: 进度回调
+            progress_value_callback: 进度值回调
+            pre_read_df: 预先读取的DataFrame（避免重复读取文件）
+            
         Returns:
             int: 导入的记录数
         """
@@ -142,13 +143,12 @@ class DataImporter:
         try:
             notify_progress(f"开始导入数据到表: {table_name}", 0)
             
-            df = pd.read_excel(excel_file)
+            df = pre_read_df if pre_read_df is not None else pd.read_excel(excel_file)
             notify_progress(f"成功读取Excel文件: {excel_file}", 10)
             
             logger.info(f"数据形状: {df.shape}")
             notify_progress(f"数据形状: {df.shape}", 20)
             
-            original_columns = df.columns.tolist()
             df.columns = [self._map_column_name(col.strip()) for col in df.columns]
             logger.info(f"标准化列名: {list(df.columns)}")
             
@@ -161,7 +161,7 @@ class DataImporter:
                     is_valid, missing_columns, found_columns = self.validate_columns(df, channel_table)
                     
                     if is_valid:
-                        imported_count = self._import_data_to_db(df, channel_table, excel_file, progress_callback, progress_value_callback)
+                        imported_count = self._import_data_to_db(df, channel_table, excel_file, progress_value_callback)
                         total_imported += imported_count
                         logger.info(f"成功导入 {imported_count} 条记录到表 {channel_table}")
                         notify_progress(f"成功导入 {imported_count} 条记录到表 {channel_table}")
@@ -183,7 +183,7 @@ class DataImporter:
             logger.info(f"找到必要的列: {found_columns}")
             notify_progress(f"找到必要的列: {found_columns}", 30)
             
-            imported_count = self._import_data_to_db(df, table_name, excel_file, progress_callback, progress_value_callback)
+            imported_count = self._import_data_to_db(df, table_name, excel_file, progress_value_callback)
             
             notify_progress(f"成功导入 {imported_count} 条记录到表 {table_name}", 100)
             
@@ -215,7 +215,7 @@ class DataImporter:
         
         return col_lower
     
-    def _import_data_to_db(self, df, table_name, source_file, progress_callback=None, progress_value_callback=None):
+    def _import_data_to_db(self, df, table_name, source_file, progress_value_callback=None):
         """
         导入数据到数据库
         
