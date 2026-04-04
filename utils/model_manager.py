@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class ModelManager:
     """模型管理器"""
     
-    def __init__(self, data_processor, ui_manager, thread_manager):
+    def __init__(self, data_processor, ui_manager, thread_manager, set_buttons_callback=None, confirm_callback=None):
         """
         初始化模型管理器
         
@@ -19,44 +19,57 @@ class ModelManager:
             data_processor: 数据处理器
             ui_manager: UI 管理器
             thread_manager: 线程管理器
+            set_buttons_callback: 设置按钮状态的回调函数
+            confirm_callback: 确认对话框回调 (title, message) -> bool
         """
         self._data = data_processor
         self._ui = ui_manager
         self._thread = thread_manager
+        self._set_buttons = set_buttons_callback or (lambda enabled: None)
+        self._confirm = confirm_callback or (lambda title, msg: True)
     
     def train_pca(self) -> None:
         """训练 PCA 模型"""
+        if not self._confirm("确认训练", "即将开始 PCA 降维训练，\n此过程可能需要较长时间。\n\n是否继续？"):
+            return
         self._start_training(
             self._data.train_pca,
-            self._on_pca_finished,
-            "PCA 训练完成"
+            self._on_pca_finished
         )
     
     def train_rf(self) -> None:
         """训练随机森林模型"""
+        if not self._confirm("确认训练", "即将开始随机森林模型训练，\n此过程可能需要较长时间。\n\n是否继续？"):
+            return
         self._start_training(
             self._data.train_model,
-            self._on_rf_finished,
-            "随机森林训练完成"
+            self._on_rf_finished
         )
     
-    def _start_training(self, train_func, callback, success_msg: str) -> None:
+    def _start_training(self, train_func, callback) -> None:
         """
         启动训练任务
         
         Args:
             train_func: 训练函数
             callback: 完成回调
-            success_msg: 成功消息
         """
         self._ui.clear_output()
+        self._set_buttons(False)
         
         worker = self._thread.start(train_func)
         worker.progress.connect(self._ui.update_output)
         worker.progress_value.connect(self._ui.update_progress)
-        worker.finished.connect(callback)
+        worker.finished.connect(self._make_on_finished(callback))
         worker.error.connect(self._on_error)
         worker.start()
+    
+    def _make_on_finished(self, callback):
+        """包装完成回调，确保恢复按钮状态"""
+        def wrapper(result):
+            self._set_buttons(True)
+            callback(result)
+        return wrapper
     
     def _on_pca_finished(self, result: Dict[str, Any]) -> None:
         """PCA 训练完成处理"""
@@ -136,5 +149,6 @@ class ModelManager:
     
     def _on_error(self, error_msg: str) -> None:
         """错误处理"""
+        self._set_buttons(True)
         logger.error(error_msg)
         self._ui.update_output(f"错误: {error_msg}")

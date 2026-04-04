@@ -7,15 +7,24 @@
 3. 按故障类型分类显示
 4. 数据统计信息
 5. 鼠标悬停显示数据点详情（跟随鼠标）
+
+架构说明：
+- ChartManager：数据管理层，负责数据加载、转换
+- ChartViewHover：图表视图，支持鼠标悬停交互
+- HoverLabel：浮动提示框组件
+- ChartContainer：UI容器，整合所有组件
 """
 
+import json
 import logging
 import numpy as np
-from typing import List, Tuple, Dict, Optional
-from PySide6.QtCore import Qt, QPointF, QPoint
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLabel, QGroupBox, QTableWidget, QTableWidgetItem
+from typing import List, Tuple, Dict, Optional, Any
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
+                               QLabel, QGroupBox, QTableWidget, QTableWidgetItem,
+                               QAbstractItemView)
 from PySide6.QtCharts import QChartView, QChart, QLineSeries, QScatterSeries, QValueAxis
-from PySide6.QtGui import QColor, QPen, QPainter, QFont, QMouseEvent
+from PySide6.QtGui import QColor, QPen, QPainter, QFont, QMouseEvent, QCursor
 
 from database.db_manager import DatabaseManager
 from config.constants import TABLE_CONFIGS
@@ -23,23 +32,13 @@ from config.constants import TABLE_CONFIGS
 logger = logging.getLogger(__name__)
 
 FEATURE_NAME_MAP: Dict[str, str] = {
-    'h2': '氢气(H₂)',
-    'ch4': '甲烷(CH₄)',
-    'c2h6': '乙烷(C₂H₆)',
-    'c2h4': '乙烯(C₂H₄)',
-    'c2h2': '乙炔(C₂H₂)',
-    'band1_energy': '频段1能量',
-    'band2_energy': '频段2能量',
-    'band3_energy': '频段3能量',
-    'band4_energy': '频段4能量',
-    'kurtosis': '峭度',
-    'main_amp': '主频幅值',
-    'main_freq': '主频率',
-    'mean': '均值',
-    'peak': '峰值',
-    'pulse_width': '脉冲宽度',
-    'skewness': '偏度',
-    'var': '方差'
+    'h2': '氢气(H₂)', 'ch4': '甲烷(CH₄)', 'c2h6': '乙烷(C₂H₆)',
+    'c2h4': '乙烯(C₂H₄)', 'c2h2': '乙炔(C₂H₂)',
+    'band1_energy': '频段1能量', 'band2_energy': '频段2能量',
+    'band3_energy': '频段3能量', 'band4_energy': '频段4能量',
+    'kurtosis': '峭度', 'main_amp': '主频幅值', 'main_freq': '主频率',
+    'mean': '均值', 'peak': '峰值', 'pulse_width': '脉冲宽度',
+    'skewness': '偏度', 'var': '方差'
 }
 
 FEATURE_UNIT_MAP: Dict[str, str] = {
@@ -55,42 +54,43 @@ FAULT_COLORS: List[QColor] = [
     QColor(0, 172, 193), QColor(142, 36, 170),
 ]
 
+CHART_VIEW_STYLE: str = "border: 1px solid #E2E8F0; border-radius: 10px; background-color: #FFFFFF;"
+INFO_LABEL_STYLE: str = "color: #546e7a; padding: 4px;"
+FAULT_DIST_LABEL_STYLE: str = "color: #455a64; padding: 5px; background: #f5f7f9; border-radius: 4px;"
+HOVER_HINT_STYLE: str = "color: #ff7043; padding: 8px; background: #fff3e0; border-radius: 6px; border: 1px solid #ffcc80;"
+STATS_TABLE_STYLE: str = """
+QTableWidget { border: 1px solid #E2E8F0; border-radius: 8px; background-color: #FFFFFF; gridline-color: #F1F5F9; selection-background-color: #EFF6FF; font-size: 12px; }
+QTableWidget::item { padding: 10px 8px; border-bottom: 1px solid #F8FAFC; color: #475569; }
+QTableWidget::item:selected { background-color: #EFF6FF; color: #1D4ED8; }
+"""
+
 
 class HoverLabel(QWidget):
     """浮动在鼠标旁边的提示框"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.setStyleSheet("""
-            background-color: rgb(40, 40, 40);
-            border: 1px solid rgb(80, 80, 80);
-            border-radius: 6px;
-            padding: 8px 12px;
-        """)
+        self.setWindowFlags(Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setStyleSheet("background-color: rgb(40, 40, 40); border: 1px solid rgb(80, 80, 80); border-radius: 6px; padding: 8px 12px;")
         self._label = QLabel(self)
         self._label.setFont(QFont("Microsoft YaHei", 9))
         self._label.setStyleSheet("color: white; background: transparent;")
-        self._label.setAlignment(Qt.AlignLeft)
+        self._label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
         layout.addWidget(self._label)
 
-    def show_at(self, text: str, global_pos: QPoint):
-        """在指定全局位置显示"""
-        self._label.setText(text)
-        self.adjustSize()
-
+    def show_at(self, text: str, global_pos: QPointF):
         x_offset, y_offset = 18, 18
         new_x = global_pos.x() + x_offset
         new_y = global_pos.y() + y_offset
-
-        self.setGeometry(new_x, new_y, self.width(), self.height())
+        self.setGeometry(int(new_x), int(new_y), self.width(), self.height())
+        self._label.setText(text)
+        self.adjustSize()
         self.show()
 
     def hide_me(self):
-        """隐藏"""
         self.hide()
 
 
@@ -117,10 +117,8 @@ class ChartViewHover(QChartView):
     def _find_nearest_point(self, chart_pos: QPointF) -> Tuple[Optional[str], Optional[int], Optional[float]]:
         if not self._series_data:
             return None, None, None
-
         min_dist = float('inf')
-        nearest = None, None, None
-
+        nearest: Tuple[Optional[str], Optional[int], Optional[float]] = (None, None, None)
         for series_name, (indices, values) in self._series_data.items():
             for i, idx in enumerate(indices):
                 if i >= len(values):
@@ -129,8 +127,7 @@ class ChartViewHover(QChartView):
                 dist = ((chart_pos.x() - px) ** 2 + (chart_pos.y() - py) ** 2) ** 0.5
                 if dist < min_dist:
                     min_dist = dist
-                    nearest = series_name, idx, py
-
+                    nearest = (series_name, idx, py)
         threshold = 30
         if min_dist > threshold:
             return None, None, None
@@ -140,10 +137,8 @@ class ChartViewHover(QChartView):
         super().mouseMoveEvent(event)
         if self.chart() is None:
             return
-
         chart_pos = self.chart().mapToValue(event.pos())
         series_name, idx, value = self._find_nearest_point(chart_pos)
-
         if idx is not None:
             title = self.chart().title().replace(' 分布', '')
             unit = ''
@@ -155,14 +150,13 @@ class ChartViewHover(QChartView):
                 text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value:.4f}</b> {unit}<br/>类型: {series_name}"
             else:
                 text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value:.4f}</b><br/>类型: {series_name}"
-
-            global_pos = event.globalPosition().toPoint()
+            global_pos = event.globalPosition()
             self._ensure_hover_label().show_at(text, global_pos)
-            self.viewport().setCursor(Qt.PointingHandCursor)
+            self.viewport().setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         else:
             if self._hover_label:
                 self._hover_label.hide_me()
-            self.viewport().setCursor(Qt.ArrowCursor)
+            self.viewport().setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
@@ -171,60 +165,105 @@ class ChartViewHover(QChartView):
 
 
 class ChartManager:
+    """数据管理层：负责数据加载、转换、特征名称映射"""
+
     def __init__(self, db_path: str = 'database/fault_data.db'):
         self.db = DatabaseManager(db_path)
-        self._current_data: Optional[Tuple[np.ndarray, np.ndarray, List[str]]] = None
+        self._current_data: Optional[Tuple[np.ndarray, np.ndarray, List[str], Dict]] = None
 
     def get_available_tables(self) -> List[Tuple[str, str]]:
-        tables = []
+        tables: List[Tuple[str, str]] = []
         all_tables = self.db.get_all_tables()
-        pd_tables = [f'pd_channel_{i}' for i in range(1, 5)]
-        for table_name in pd_tables:
+        ordered_tables = [
+            'oil_chromatography',
+            'fusion_features_dga',
+            'pd_channel_1', 'pd_channel_2', 'pd_channel_3', 'pd_channel_4',
+            'fusion_features_pd_ch1', 'fusion_features_pd_ch2',
+            'fusion_features_pd_ch3', 'fusion_features_pd_ch4'
+        ]
+        for table_name in ordered_tables:
             if table_name in all_tables:
                 config = TABLE_CONFIGS.get(table_name)
                 if config:
                     tables.append((table_name, config['name']))
-        if 'oil_chromatography' in all_tables:
-            config = TABLE_CONFIGS.get('oil_chromatography')
-            if config:
-                tables.insert(0, ('oil_chromatography', config['name']))
         return tables
 
     def load_table_data(self, table_name: str) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
         if table_name not in TABLE_CONFIGS:
             raise ValueError(f"[错误] 未知表: {table_name}")
         config = TABLE_CONFIGS[table_name]
+        is_pca = config.get('is_pca', False)
         data, columns = self.db.get_table_data(table_name)
         if not data:
             raise ValueError(f"[错误] 表 {table_name} 无数据")
-
         col_idx = {col: idx for idx, col in enumerate(columns)}
-        feature_cols = config['features']
         label_col = config['label_col']
+        if is_pca:
+            return self._load_pca_table_data(data, col_idx, label_col)
+        feature_cols = config['features']
         valid_cols = [c for c in feature_cols if c in col_idx]
-
         X, y = [], []
         for row in data:
             features = [row[col_idx[c]] for c in valid_cols]
             if all(v is not None for v in features):
                 X.append(features)
                 y.append(row[col_idx[label_col]] if label_col in col_idx else '未知')
-
-        X, y = np.array(X), np.array(y)
-        fault_stats = {}
-        for ft in np.unique(y):
-            mask = y == ft
-            fault_stats[ft] = {'count': int(np.sum(mask)), 'percentage': float(np.sum(mask)) / len(y) * 100}
-
-        self._current_data = (X, y, valid_cols, fault_stats)
-        logger.info(f"[加载] {table_name}: {len(X)} 样本, {len(valid_cols)} 特征")
+        X_arr, y_arr = np.array(X), np.array(y)
+        fault_stats = self._compute_fault_stats(y_arr)
+        self._current_data = (X_arr, y_arr, valid_cols, fault_stats)
+        logger.info(f"[加载] {table_name}: {len(X_arr)} 样本, {len(valid_cols)} 特征")
         return self._current_data
 
+    def _load_pca_table_data(self, data: List, col_idx: Dict, label_col: str) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
+        pc_col = 'principal_components'
+        if pc_col not in col_idx:
+            raise ValueError(f"[错误] PCA表缺少 {pc_col} 列")
+        X, y = [], []
+        max_pcs = 0
+        for row in data:
+            pc_json = row[col_idx[pc_col]]
+            if pc_json is None:
+                continue
+            try:
+                pc_values = json.loads(pc_json) if isinstance(pc_json, str) else pc_json
+                if isinstance(pc_values, list) and len(pc_values) > 0:
+                    X.append(pc_values)
+                    y.append(row[col_idx[label_col]] if label_col in col_idx else '未知')
+                    max_pcs = max(max_pcs, len(pc_values))
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if not X:
+            raise ValueError("[错误] PCA表无有效数据")
+        for i, pc in enumerate(X):
+            if len(pc) < max_pcs:
+                X[i] = pc + [0.0] * (max_pcs - len(pc))
+        X_arr, y_arr = np.array(X), np.array(y)
+        feature_names = [f'pc{i+1}' for i in range(max_pcs)]
+        fault_stats = self._compute_fault_stats(y_arr)
+        self._current_data = (X_arr, y_arr, feature_names, fault_stats)
+        logger.info(f"[加载PCA] {len(X_arr)} 样本, {max_pcs} 主成分")
+        return self._current_data
+
+    def _compute_fault_stats(self, y_arr: np.ndarray) -> Dict[str, Dict[str, float]]:
+        fault_stats: Dict[str, Dict[str, float]] = {}
+        for ft in np.unique(y_arr):
+            mask = y_arr == ft
+            fault_stats[ft] = {
+                'count': int(np.sum(mask)),
+                'percentage': float(np.sum(mask)) / len(y_arr) * 100
+            }
+        return fault_stats
+
     def get_feature_display_name(self, col_name: str) -> str:
+        if col_name.startswith('pc') and col_name[2:].isdigit():
+            pc_num = int(col_name[2:])
+            return f"主成分{pc_num} (PC{pc_num})"
         base = col_name.split('_', 1)[-1] if '_' in col_name else col_name
         return FEATURE_NAME_MAP.get(base.lower(), base)
 
     def get_feature_unit(self, col_name: str) -> str:
+        if col_name.startswith('pc') and col_name[2:].isdigit():
+            return ''
         base = col_name.split('_', 1)[-1] if '_' in col_name else col_name
         return FEATURE_UNIT_MAP.get(base.lower(), '')
 
@@ -235,6 +274,8 @@ class ChartManager:
 
 
 class ChartContainer(QWidget):
+    """UI容器层：整合数据管理与视图，负责所有UI组件的布局和交互"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._init_ui()
@@ -279,7 +320,7 @@ class ChartContainer(QWidget):
         info_layout = QHBoxLayout()
         self.info_label = QLabel("请选择数据表查看图表 | 鼠标悬停查看数据点详情")
         self.info_label.setFont(QFont("Microsoft YaHei", 10))
-        self.info_label.setStyleSheet("color: #546e7a; padding: 4px;")
+        self.info_label.setStyleSheet(INFO_LABEL_STYLE)
         info_layout.addWidget(self.info_label)
         info_layout.addStretch()
         main_layout.addLayout(info_layout)
@@ -291,8 +332,8 @@ class ChartContainer(QWidget):
 
         self.chart_area = ChartViewHover()
         self.chart_area.setMinimumSize(650, 500)
-        self.chart_area.setRenderHint(QPainter.Antialiasing)
-        self.chart_area.setStyleSheet("border: 1px solid #cfd8dc; border-radius: 8px; background-color: white;")
+        self.chart_area.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.chart_area.setStyleSheet(CHART_VIEW_STYLE)
         content_layout.addWidget(self.chart_area, 1)
 
         right_panel = QWidget()
@@ -309,14 +350,17 @@ class ChartContainer(QWidget):
         self.stats_table.setColumnCount(3)
         self.stats_table.setHorizontalHeaderLabels(["故障类型", "数量", "占比"])
         self.stats_table.horizontalHeader().setStretchLastSection(True)
-        self.stats_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.stats_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.stats_table.setAlternatingRowColors(True)
+        self.stats_table.verticalHeader().setDefaultSectionSize(32)
+        self.stats_table.verticalHeader().setVisible(False)
+        self.stats_table.setStyleSheet(STATS_TABLE_STYLE)
         stats_layout.addWidget(self.stats_table)
 
         self.fault_dist_label = QLabel()
         self.fault_dist_label.setFont(QFont("Microsoft YaHei", 9))
         self.fault_dist_label.setWordWrap(True)
-        self.fault_dist_label.setStyleSheet("color: #455a64; padding: 5px; background: #f5f7f9; border-radius: 4px;")
+        self.fault_dist_label.setStyleSheet(FAULT_DIST_LABEL_STYLE)
         stats_layout.addWidget(self.fault_dist_label)
         stats_layout.addStretch()
         right_layout.addWidget(self.stats_widget, 1)
@@ -324,7 +368,7 @@ class ChartContainer(QWidget):
         self.hover_hint_label = QLabel("💡 提示：鼠标移动到图表上的数据点查看详情")
         self.hover_hint_label.setFont(QFont("Microsoft YaHei", 9))
         self.hover_hint_label.setWordWrap(True)
-        self.hover_hint_label.setStyleSheet("color: #ff7043; padding: 8px; background: #fff3e0; border-radius: 6px; border: 1px solid #ffcc80;")
+        self.hover_hint_label.setStyleSheet(HOVER_HINT_STYLE)
         right_layout.addWidget(self.hover_hint_label)
 
         content_layout.addWidget(right_panel, 0)
@@ -333,7 +377,7 @@ class ChartContainer(QWidget):
         self.legend_widget = QWidget()
         self.legend_widget.setMaximumHeight(40)
         self.legend_layout = QHBoxLayout(self.legend_widget)
-        self.legend_layout.setAlignment(Qt.AlignCenter)
+        self.legend_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.legend_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.addWidget(self.legend_widget)
 
@@ -373,7 +417,6 @@ class ChartContainer(QWidget):
             self.stats_table.setItem(i, 1, QTableWidgetItem(str(stats['count'])))
             self.stats_table.setItem(i, 2, QTableWidgetItem(f"{stats['percentage']:.1f}%"))
         self.stats_table.resizeColumnsToContents()
-
         dist = "故障分布：\n"
         for ft, stats in sorted(fault_stats.items(), key=lambda x: x[1]['count'], reverse=True):
             dist += f"• {ft}: {stats['count']}个({stats['percentage']:.1f}%)\n"
@@ -388,7 +431,10 @@ class ChartContainer(QWidget):
         try:
             X, y, feature_names, fault_stats = self.chart_manager.load_table_data(table_name)
             config = TABLE_CONFIGS[table_name]
-            self.info_label.setText(f"表: {config['name']} | 样本数: {len(X)} | 特征数: {len(feature_names)} | 故障类型: {len(fault_stats)}种")
+            self.info_label.setText(
+                f"表: {config['name']} | 样本数: {len(X)} | "
+                f"特征数: {len(feature_names)} | 故障类型: {len(fault_stats)}种"
+            )
             self._update_stats(fault_stats)
             self._refresh_features(table_name)
         except Exception as e:
@@ -403,8 +449,10 @@ class ChartContainer(QWidget):
     def _clear_legend(self):
         while self.legend_layout.count():
             item = self.legend_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            if item is not None:
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
 
     def _display_current_chart(self):
         if not self.chart_manager._current_data:
@@ -418,10 +466,8 @@ class ChartContainer(QWidget):
             feature_data = X[:, col_idx]
             y_axis_title = self.chart_manager.get_y_axis_title(col_name)
             chart_type = self.chart_type_selector.currentText()
-
             self._clear_legend()
             self.chart_area.clear_series_data()
-
             if chart_type == "折线图":
                 self._display_line_chart(feature_data, y, y_axis_title, col_name)
             else:
@@ -429,123 +475,97 @@ class ChartContainer(QWidget):
         except Exception as e:
             logger.error(f"[图表显示失败] {e}")
 
-    def _display_line_chart(self, feature_data: np.ndarray, y: np.ndarray, y_axis_title: str, col_name: str):
+    def _build_chart(self, y_axis_title: str) -> QChart:
         chart = QChart()
         chart.setTitle(f"{y_axis_title} 分布")
-        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
         chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
+        chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
         chart.setBackgroundVisible(True)
         chart.setBackgroundBrush(QColor(255, 255, 255))
+        return chart
 
-        unique_faults = list(np.unique(y))
-        fault_color_map = {ft: FAULT_COLORS[i % len(FAULT_COLORS)] for i, ft in enumerate(unique_faults)}
-
+    def _add_axes(self, chart: QChart, y_axis_title: str) -> Tuple[QValueAxis, QValueAxis]:
         axis_x = QValueAxis()
         axis_x.setTitleText("样本序号")
         axis_x.setLabelFormat("%d")
         axis_y = QValueAxis()
         axis_y.setTitleText(y_axis_title)
         axis_y.setLabelFormat("%.3f")
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        chart.addAxis(axis_y, Qt.AlignLeft)
+        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        return axis_x, axis_y
 
-        max_points_per_fault = 2000
+    def _add_series_to_chart(self, chart: QChart, series: Any, indices: List[int],
+                             values: np.ndarray, color: QColor,
+                             series_name: str, axis_x: QValueAxis, axis_y: QValueAxis):
+        series.setName(series_name)
+        if hasattr(series, 'setPen'):
+            series.setPen(QPen(color, 1.5))
+        else:
+            series.setColor(color)
+        if hasattr(series, 'setMarkerSize'):
+            series.setMarkerSize(8)
+        max_points = 2000
+        n = len(indices)
+        if n > max_points:
+            step = n // max_points
+            sampled_idx, sampled_val = indices[::step], values[::step]
+        else:
+            sampled_idx, sampled_val = indices, values
+        for idx, val in zip(sampled_idx, sampled_val):
+            series.append(float(idx), float(val))
+        chart.addSeries(series)
+        series.attachAxis(axis_x)
+        series.attachAxis(axis_y)
+        self.chart_area.set_series_data(series_name, sampled_idx, sampled_val)
 
+    def _display_line_chart(self, feature_data: np.ndarray, y: np.ndarray,
+                            y_axis_title: str, col_name: str):
+        chart = self._build_chart(y_axis_title)
+        axis_x, axis_y = self._add_axes(chart, y_axis_title)
+        unique_faults = list(np.unique(y))
+        fault_color_map = {ft: FAULT_COLORS[i % len(FAULT_COLORS)] for i, ft in enumerate(unique_faults)}
         for ft in unique_faults:
             color = fault_color_map[ft]
             series = QLineSeries()
-            series.setName(ft)
-            series.setPen(QPen(color, 1.5))
-
             indices = [j for j, label in enumerate(y) if label == ft]
             ft_data = feature_data[indices]
-            n_ft = len(indices)
-            if n_ft > max_points_per_fault:
-                ft_step = n_ft // max_points_per_fault
-                sampled_idx = indices[::ft_step]
-                sampled_val = ft_data[::ft_step]
-            else:
-                sampled_idx = indices
-                sampled_val = ft_data
-
-            for idx, val in zip(sampled_idx, sampled_val):
-                series.append(float(idx), float(val))
-
-            chart.addSeries(series)
-            series.attachAxis(axis_x)
-            series.attachAxis(axis_y)
-            self.chart_area.set_series_data(ft, sampled_idx, sampled_val)
-
-            legend_item = QLabel(f"<span style='color:{color.name()};'>\u25CF</span> {ft}")
-            legend_item.setFont(QFont("Microsoft YaHei", 9))
-            self.legend_layout.addWidget(legend_item)
-
-        if len(feature_data) > 0:
-            axis_x.setRange(0, len(feature_data) - 1)
-            y_min, y_max = feature_data.min(), feature_data.max()
-            margin = (y_max - y_min) * 0.15 if y_max > y_min else 1.0
-            axis_y.setRange(max(0, y_min - margin), y_max + margin)
-
+            self._add_series_to_chart(chart, series, indices, ft_data, color, ft, axis_x, axis_y)
+            self._add_legend_item(ft, color)
+        self._set_axis_ranges(chart, feature_data)
         self.chart_area.setChart(chart)
 
-    def _display_scatter_chart(self, feature_data: np.ndarray, y: np.ndarray, y_axis_title: str, col_name: str):
-        chart = QChart()
-        chart.setTitle(f"{y_axis_title} 分布")
-        chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
-        chart.setBackgroundVisible(True)
-        chart.setBackgroundBrush(QColor(255, 255, 255))
-
+    def _display_scatter_chart(self, feature_data: np.ndarray, y: np.ndarray,
+                               y_axis_title: str, col_name: str):
+        chart = self._build_chart(y_axis_title)
+        axis_x, axis_y = self._add_axes(chart, y_axis_title)
         unique_faults = list(np.unique(y))
         fault_color_map = {ft: FAULT_COLORS[i % len(FAULT_COLORS)] for i, ft in enumerate(unique_faults)}
-
-        axis_x = QValueAxis()
-        axis_x.setTitleText("样本序号")
-        axis_x.setLabelFormat("%d")
-        axis_y = QValueAxis()
-        axis_y.setTitleText(y_axis_title)
-        axis_y.setLabelFormat("%.3f")
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        chart.addAxis(axis_y, Qt.AlignLeft)
-
-        max_points_per_fault = 2000
-
         for ft in unique_faults:
             color = fault_color_map[ft]
             series = QScatterSeries()
-            series.setName(ft)
-            series.setColor(color)
-            series.setMarkerSize(8)
-
             indices = [j for j, label in enumerate(y) if label == ft]
             ft_data = feature_data[indices]
-            n_ft = len(indices)
-            if n_ft > max_points_per_fault:
-                ft_step = n_ft // max_points_per_fault
-                sampled_idx = indices[::ft_step]
-                sampled_val = ft_data[::ft_step]
-            else:
-                sampled_idx = indices
-                sampled_val = ft_data
-
-            for idx, val in zip(sampled_idx, sampled_val):
-                series.append(float(idx), float(val))
-
-            chart.addSeries(series)
-            series.attachAxis(axis_x)
-            series.attachAxis(axis_y)
-            self.chart_area.set_series_data(ft, sampled_idx, sampled_val)
-
-            legend_item = QLabel(f"<span style='color:{color.name()};'>\u25CF</span> {ft}")
-            legend_item.setFont(QFont("Microsoft YaHei", 9))
-            self.legend_layout.addWidget(legend_item)
-
-        if len(feature_data) > 0:
-            axis_x.setRange(0, len(feature_data) - 1)
-            y_min, y_max = feature_data.min(), feature_data.max()
-            margin = (y_max - y_min) * 0.15 if y_max > y_min else 1.0
-            axis_y.setRange(max(0, y_min - margin), y_max + margin)
-
+            self._add_series_to_chart(chart, series, indices, ft_data, color, ft, axis_x, axis_y)
+            self._add_legend_item(ft, color)
+        self._set_axis_ranges(chart, feature_data)
         self.chart_area.setChart(chart)
+
+    def _add_legend_item(self, fault_name: str, color: QColor):
+        label = QLabel(f"<span style='color:{color.name()};'>\u25CF</span> {fault_name}")
+        label.setFont(QFont("Microsoft YaHei", 9))
+        self.legend_layout.addWidget(label)
+
+    def _set_axis_ranges(self, chart: QChart, feature_data: np.ndarray):
+        if len(feature_data) == 0:
+            return
+        axes = chart.axes()
+        if len(axes) < 2:
+            return
+        axis_x = axes[0]
+        axis_y = axes[1]
+        axis_x.setRange(0, len(feature_data) - 1)
+        y_min, y_max = float(feature_data.min()), float(feature_data.max())
+        margin = (y_max - y_min) * 0.15 if y_max > y_min else 1.0
+        axis_y.setRange(max(0, y_min - margin), y_max + margin)

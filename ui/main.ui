@@ -13,7 +13,7 @@
   <property name="minimumSize">
    <size>
     <width>1000</width>
-    <height>800</height>
+    <height>700</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -27,83 +27,85 @@
    <string notr="true">
 /* ================================================
    现代化工业软件界面样式表
-   设计理念：简洁、专业、高效
-   主色调：科技蓝 (#1E88E5)
-   辅助色：深灰 (#37474F)、浅灰 (#ECEFF1)
+   设计理念：简洁、专业、高效、扁平化
+   主色调：深蓝灰 (#1E293B)
+   强调色：科技蓝 (#3B82F6)
+   辅助色：中灰 (#64748B)、浅灰 (#F1F5F9)
    ================================================ */
 
 /* ========== 全局背景 ========== */
 QMainWindow {
-    background-color: #f0f4f8;
+    background-color: #F8FAFC;
 }
 
 QWidget {
     font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, Arial, sans-serif;
     font-size: 13px;
+    color: #1E293B;
 }
 
 /* ========== 菜单栏 ========== */
 QMenuBar {
-    background-color: #ffffff;
-    border-bottom: 1px solid #dde2e8;
-    padding: 4px 8px;
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 6px 12px;
 }
 
 QMenuBar::item {
     background-color: transparent;
-    padding: 8px 14px;
-    border-radius: 4px;
-    color: #37474f;
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: #334155;
 }
 
 QMenuBar::item:selected {
-    background-color: #e3f2fd;
-    color: #1e88e5;
+    background-color: #EFF6FF;
+    color: #3B82F6;
 }
 
 QMenuBar::item:pressed {
-    background-color: #bbdefb;
+    background-color: #DBEAFE;
 }
 
 QMenu {
-    background-color: #ffffff;
-    border: 1px solid #dde2e8;
-    border-radius: 6px;
-    padding: 6px 0px;
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 8px 0px;
 }
 
 QMenu::item {
-    padding: 10px 28px;
+    padding: 10px 32px 10px 16px;
     border-radius: 4px;
-    color: #37474f;
+    color: #334155;
 }
 
 QMenu::item:selected {
-    background-color: #e3f2fd;
-    color: #1e88e5;
+    background-color: #EFF6FF;
+    color: #3B82F6;
 }
 
 QMenu::separator {
     height: 1px;
-    background-color: #eceff1;
-    margin: 6px 12px;
+    background-color: #F1F5F9;
+    margin: 6px 16px;
 }
 
 /* ========== 状态栏 ========== */
 QStatusBar {
-    background-color: #eceff1;
-    color: #607d8b;
-    border-top: 1px solid #dde2e8;
-    padding: 6px 12px;
+    background-color: #F1F5F9;
+    color: #64748B;
+    border-top: 1px solid #E2E8F0;
+    padding: 8px 16px;
     font-size: 12px;
 }
 
 /* ========== 按钮基础样式 ========== */
 QPushButton {
-    background-color: #1e88e5;
-    color: white;
+    background-color: #3B82F6;
+    color: #FFFFFF;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 10px 20px;
     min-width: 80px;
     font-weight: 500;
@@ -111,195 +113,234 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: #1976d2;
+    background-color: #2563EB;
 }
 
 QPushButton:pressed {
-    background-color: #1565c0;
+    background-color: #1D4ED8;
 }
 
 QPushButton:disabled {
-    background-color: #b0bec5;
-    color: #78909c;
+    background-color: #CBD5E1;
+    color: #94A3B8;
 }
 
 /* ========== 功能按钮区分 ========== */
 
-/* 主要操作按钮 - 蓝色 */
+/* 刷新数据表按钮 - 深灰 */
 QPushButton#pushButton {
-    background-color: #455a64;
+    background-color: #475569;
 }
 QPushButton#pushButton:hover {
-    background-color: #37474f;
+    background-color: #334155;
 }
 
-/* PCA/数据降维按钮 - 蓝灰色 */
+/* PCA/数据降维按钮 - 蓝灰 */
 QPushButton#btn_pca {
-    background-color: #546e7a;
+    background-color: #64748B;
 }
 QPushButton#btn_pca:hover {
-    background-color: #455a64;
+    background-color: #475569;
 }
 
 /* RF/训练模型按钮 - 绿色 */
 QPushButton#btn_rf {
-    background-color: #43a047;
+    background-color: #10B981;
 }
 QPushButton#btn_rf:hover {
-    background-color: #388e3c;
+    background-color: #059669;
 }
 
-/* 预测按钮 - 橙色（醒目） */
+/* 预测按钮 - 橙色（醒目 CTA） */
 QPushButton#btn_pd {
-    background-color: #fb8c00;
+    background-color: #F97316;
     font-size: 14px;
     font-weight: bold;
-    padding: 12px 24px;
+    padding: 12px 28px;
+    border-radius: 10px;
 }
 QPushButton#btn_pd:hover {
-    background-color: #f57c00;
+    background-color: #EA580C;
 }
 QPushButton#btn_pd:pressed {
-    background-color: #ef6c00;
+    background-color: #C2410C;
 }
 
 /* 日志按钮 - 次要样式 */
 QPushButton#showlog_btn {
     background-color: transparent;
-    color: #607d8b;
-    border: 1px solid #b0bec5;
-    padding: 6px 14px;
+    color: #64748B;
+    border: 1px solid #CBD5E1;
+    padding: 8px 16px;
 }
 QPushButton#showlog_btn:hover {
-    background-color: #eceff1;
-    color: #455a64;
+    background-color: #F1F5F9;
+    border-color: #94A3B8;
+    color: #334155;
 }
 
 /* ========== 下拉框 ========== */
 QComboBox {
-    border: 1px solid #cfd8dc;
-    border-radius: 6px;
-    padding: 8px 14px;
-    background-color: #ffffff;
-    min-height: 20px;
-    color: #37474f;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 9px 14px;
+    background-color: #FFFFFF;
+    min-height: 22px;
+    color: #334155;
 }
 
 QComboBox:hover {
-    border-color: #b0bec5;
+    border-color: #94A3B8;
 }
 
 QComboBox:focus {
-    border-color: #1e88e5;
+    border-color: #3B82F6;
     outline: none;
 }
 
 QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
-    width: 28px;
-    border-left: 1px solid #cfd8dc;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-    background-color: #f5f7f9;
+    width: 32px;
+    border-left: 1px solid #E2E8F0;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: #F8FAFC;
 }
 
 QComboBox::drop-down:hover {
-    background-color: #eceff1;
+    background-color: #F1F5F9;
 }
 
 QComboBox::down-arrow {
     image: none;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 6px solid #607d8b;
+    border-top: 6px solid #64748B;
 }
 
 QComboBox QAbstractItemView {
-    border: 1px solid #cfd8dc;
-    border-radius: 6px;
-    background-color: #ffffff;
-    selection-background-color: #e3f2fd;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    background-color: #FFFFFF;
+    selection-background-color: #EFF6FF;
     outline: none;
     padding: 6px 0px;
 }
 
 QComboBox QAbstractItemView::item {
     padding: 10px 16px;
-    min-height: 20px;
+    min-height: 22px;
+    color: #334155;
 }
 
 QComboBox QAbstractItemView::item:hover {
-    background-color: #f5f7f9;
+    background-color: #EFF6FF;
+    color: #1D4ED8;
 }
 
 /* ========== 表格 ========== */
 QTableWidget {
-    border: 1px solid #cfd8dc;
-    border-radius: 8px;
-    background-color: #ffffff;
-    gridline-color: #eceff1;
-    selection-background-color: #e3f2fd;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    gridline-color: #F1F5F9;
+    selection-background-color: #EFF6FF;
 }
 
 QTableWidget::item {
-    padding: 8px;
-    border-bottom: 1px solid #f5f7f9;
-    color: #37474f;
+    padding: 10px 8px;
+    border-bottom: 1px solid #F8FAFC;
+    color: #334155;
 }
 
 QTableWidget::item:selected {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: #EFF6FF;
+    color: #1D4ED8;
 }
 
 QTableWidget::item:hover {
-    background-color: #f5f7f9;
+    background-color: #F8FAFC;
 }
 
 QHeaderView::section {
-    background-color: #f5f7f9;
-    padding: 10px 8px;
+    background-color: #F8FAFC;
+    padding: 12px 10px;
     border: none;
-    border-bottom: 2px solid #cfd8dc;
-    border-right: 1px solid #eceff1;
+    border-bottom: 2px solid #E2E8F0;
+    border-right: 1px solid #F1F5F9;
     font-weight: 600;
-    color: #455a64;
+    color: #475569;
 }
 
 QHeaderView::section:hover {
-    background-color: #eceff1;
+    background-color: #F1F5F9;
 }
 
 QTableWidget QTableCornerButton::section {
-    background-color: #f5f7f9;
+    background-color: #F8FAFC;
     border: none;
-    border-bottom: 2px solid #cfd8dc;
-    border-right: 1px solid #eceff1;
+    border-bottom: 2px solid #E2E8F0;
+    border-right: 1px solid #F1F5F9;
+}
+
+/* ========== 输入表格 ========== */
+#showinput_tableWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    gridline-color: #F1F5F9;
+    selection-background-color: #EFF6FF;
+}
+
+#showinput_tableWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #F1F5F9;
+    color: #1E293B;
+    background-color: #FFFFFF;
+}
+
+#showinput_tableWidget::item:hover {
+    background-color: #F8FAFC;
+}
+
+#showinput_tableWidget::item:selected {
+    background-color: #EFF6FF;
+    color: #1D4ED8;
+}
+
+#showinput_tableWidget QHeaderView::section {
+    background-color: #F8FAFC;
+    padding: 10px 8px;
+    border: none;
+    border-bottom: 2px solid #E2E8F0;
+    border-right: 1px solid #F1F5F9;
+    font-weight: 600;
+    color: #475569;
 }
 
 /* ========== 文本编辑框 ========== */
 QTextEdit {
-    border: 1px solid #cfd8dc;
-    border-radius: 8px;
-    padding: 12px;
-    background-color: #ffffff;
-    color: #37474f;
-    selection-background-color: #bbdefb;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 14px;
+    background-color: #FFFFFF;
+    color: #334155;
+    selection-background-color: #DBEAFE;
 }
 
 QTextEdit:hover {
-    border-color: #b0bec5;
+    border-color: #94A3B8;
 }
 
 QTextEdit:focus {
-    border-color: #1e88e5;
+    border-color: #3B82F6;
     outline: none;
 }
 
 /* ========== 标签 ========== */
 QLabel {
-    color: #37474f;
+    color: #334155;
     background-color: transparent;
     padding: 2px 4px;
 }
@@ -308,35 +349,36 @@ QLabel {
 QLabel#showtext_label,
 QLabel#showtext_label_2,
 QLabel#label {
-    font-weight: 500;
-    color: #546e7a;
+    font-weight: 600;
+    color: #475569;
 }
 
 /* 通知标签 */
 QLabel#notification_label {
-    font-weight: 600;
-    color: #1e88e5;
+    font-weight: 700;
+    color: #3B82F6;
 }
 
 /* 时间标签 */
 QLabel#showtime_label {
-    font-weight: 600;
-    color: #fb8c00;
+    font-weight: 700;
+    color: #F97316;
 }
 
 /* ========== 进度条 ========== */
 QProgressBar {
-    border: 1px solid #cfd8dc;
+    border: none;
     border-radius: 6px;
-    background-color: #f5f7f9;
+    background-color: #E2E8F0;
     text-align: center;
-    color: #546e7a;
-    font-weight: 500;
+    color: #64748B;
+    font-weight: 600;
+    min-height: 10px;
 }
 
 QProgressBar::chunk {
-    background-color: #1e88e5;
-    border-radius: 5px;
+    background-color: #3B82F6;
+    border-radius: 6px;
 }
 
 /* ========== 中心部件 ========== */
@@ -344,21 +386,21 @@ QWidget#centralwidget {
     background-color: transparent;
 }
 
-/* ========== 滚动条（可选） ========== */
+/* ========== 滚动条 ========== */
 QScrollBar:vertical {
-    background-color: #f5f7f9;
+    background-color: #F8FAFC;
     width: 10px;
     border-radius: 5px;
 }
 
 QScrollBar::handle:vertical {
-    background-color: #b0bec5;
+    background-color: #CBD5E1;
     border-radius: 5px;
     min-height: 30px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background-color: #90a4ae;
+    background-color: #94A3B8;
 }
 
 QScrollBar::add-line:vertical,
@@ -367,19 +409,19 @@ QScrollBar::sub-line:vertical {
 }
 
 QScrollBar:horizontal {
-    background-color: #f5f7f9;
+    background-color: #F8FAFC;
     height: 10px;
     border-radius: 5px;
 }
 
 QScrollBar::handle:horizontal {
-    background-color: #b0bec5;
+    background-color: #CBD5E1;
     border-radius: 5px;
     min-width: 30px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background-color: #90a4ae;
+    background-color: #94A3B8;
 }
 
 QScrollBar::add-line:horizontal,
@@ -397,8 +439,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
-          <fontweight>Medium</fontweight>
+          <pointsize>-1</pointsize>
+          <fontweight>DemiBold</fontweight>
          </font>
         </property>
         <property name="text">
@@ -408,10 +450,16 @@ QScrollBar::sub-line:horizontal {
       </item>
       <item row="6" column="4" colspan="3">
        <widget class="QTextEdit" name="textEdit_output">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>9</pointsize>
+          <pointsize>-1</pointsize>
          </font>
         </property>
         <property name="readOnly">
@@ -424,7 +472,7 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
          </font>
         </property>
        </widget>
@@ -434,7 +482,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
+          <fontweight>Medium</fontweight>
          </font>
         </property>
         <property name="text">
@@ -447,7 +496,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
+          <fontweight>Medium</fontweight>
          </font>
         </property>
         <property name="text">
@@ -460,8 +510,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
-          <fontweight>Medium</fontweight>
+          <pointsize>-1</pointsize>
+          <fontweight>DemiBold</fontweight>
          </font>
         </property>
         <property name="text">
@@ -474,7 +524,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
+          <fontweight>Medium</fontweight>
          </font>
         </property>
         <property name="text">
@@ -487,7 +538,7 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>14</pointsize>
+          <pointsize>-1</pointsize>
           <bold>true</bold>
          </font>
         </property>
@@ -501,7 +552,7 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
          </font>
         </property>
         <item>
@@ -516,7 +567,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>10</pointsize>
+          <pointsize>-1</pointsize>
+          <fontweight>Medium</fontweight>
          </font>
         </property>
         <property name="text">
@@ -526,11 +578,26 @@ QScrollBar::sub-line:horizontal {
       </item>
       <item row="4" column="4" colspan="3">
        <widget class="QTableWidget" name="showinput_tableWidget">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>200</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>300</height>
+         </size>
+        </property>
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>12</pointsize>
+          <pointsize>-1</pointsize>
          </font>
+        </property>
+        <property name="alternatingRowColors">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -539,7 +606,7 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>12</pointsize>
+          <pointsize>-1</pointsize>
          </font>
         </property>
        </widget>
@@ -565,8 +632,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>13</pointsize>
-          <fontweight>Medium</fontweight>
+          <pointsize>-1</pointsize>
+          <fontweight>DemiBold</fontweight>
          </font>
         </property>
         <property name="text">
@@ -591,8 +658,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>13</pointsize>
-          <fontweight>DemiBold</fontweight>
+          <pointsize>-1</pointsize>
+          <bold>true</bold>
          </font>
         </property>
         <property name="text">
@@ -601,11 +668,24 @@ QScrollBar::sub-line:horizontal {
        </widget>
       </item>
       <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QProgressBar" name="progressBar">
         <property name="minimumSize">
          <size>
           <width>120</width>
-          <height>0</height>
+          <height>10</height>
          </size>
         </property>
         <property name="maximumSize">
@@ -617,8 +697,8 @@ QScrollBar::sub-line:horizontal {
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>12</pointsize>
-          <fontweight>Medium</fontweight>
+          <pointsize>-1</pointsize>
+          <fontweight>DemiBold</fontweight>
          </font>
         </property>
         <property name="value">
@@ -630,21 +710,15 @@ QScrollBar::sub-line:horizontal {
        <widget class="QLabel" name="showtime_label">
         <property name="minimumSize">
          <size>
-          <width>140</width>
+          <width>180</width>
           <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>100</width>
-          <height>16777215</height>
          </size>
         </property>
         <property name="font">
          <font>
           <family>Microsoft YaHei</family>
-          <pointsize>13</pointsize>
-          <fontweight>DemiBold</fontweight>
+          <pointsize>-1</pointsize>
+          <bold>true</bold>
          </font>
         </property>
         <property name="text">
@@ -660,30 +734,30 @@ QScrollBar::sub-line:horizontal {
    <property name="font">
     <font>
      <family>Microsoft YaHei</family>
-     <pointsize>9</pointsize>
+     <pointsize>-1</pointsize>
     </font>
    </property>
   </widget>
   <widget class="QMenuBar" name="menuBar">
-   <property name="font">
-    <font>
-     <family>Microsoft YaHei</family>
-     <pointsize>9</pointsize>
-    </font>
-   </property>
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>43</height>
+     <height>47</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Microsoft YaHei</family>
+     <pointsize>-1</pointsize>
+    </font>
    </property>
    <widget class="QMenu" name="menu">
     <property name="font">
      <font>
       <family>Microsoft YaHei</family>
-      <pointsize>13</pointsize>
+      <pointsize>-1</pointsize>
      </font>
     </property>
     <property name="title">

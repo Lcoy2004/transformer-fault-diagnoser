@@ -7,67 +7,48 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>200</height>
+    <height>250</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>400</width>
-    <height>200</height>
+    <height>250</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>400</width>
-    <height>200</height>
+    <height>250</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>关于</string>
   </property>
   <property name="styleSheet">
    <string notr="true">
 /* ================================================
    关于对话框 - 现代化简约风格
-   设计理念：专业、简洁、清晰
+   设计理念：专业、简洁、扁平化
+   主色调：深蓝灰 (#1E293B)
+   强调色：科技蓝 (#3B82F6)
    ================================================ */
 
-QDialog#Dialog_aboutme {
-    background-color: #f0f4f8;
-    border: 1px solid #dde2e8;
-    border-radius: 12px;
+QDialog {
+    background-color: #F8FAFC;
 }
 
-/* 文本编辑框 - 主内容区 */
-QTextBrowser#textEdit {
-    background-color: #ffffff;
-    border: none;
+QTextBrowser {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 10px;
     padding: 20px 24px;
-    selection-background-color: #bbdefb;
+    selection-background-color: #DBEAFE;
     color: #334155;
     font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, Arial, sans-serif;
     font-size: 13px;
     line-height: 1.7;
 }
-
-/* 标题样式 - 使用 HTML */
-QTextBrowser#textEdit strong {
-    color: #1e3a5f;
-    font-size: 15px;
-}
-
-/* 链接样式 */
-QTextBrowser#textEdit a {
-    color: #1e88e5;
-    text-decoration: none;
-}
-
-QTextBrowser#textEdit a:hover {
-    color: #1976d2;
-    text-decoration: underline;
-}
-
 </string>
   </property>
   <widget class="QTextBrowser" name="textEdit">
@@ -75,36 +56,9 @@ QTextBrowser#textEdit a:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>400</width>
-     <height>200</height>
+     <width>401</width>
+     <height>281</height>
     </rect>
-   </property>
-   <property name="minimumSize">
-    <size>
-     <width>400</width>
-     <height>200</height>
-    </size>
-   </property>
-   <property name="maximumSize">
-    <size>
-     <width>400</width>
-     <height>200</height>
-    </size>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QDialog#Dialog_aboutme {
-        background-color: #f8fafc;
-        border: 1px solid #d0d7de;
-        border-radius: 12px;
-    }
-    QTextBrowser#textEdit {
-        background-color: #ffffff;
-        border: none;
-        border-radius: 8px;
-        padding: 16px;
-        selection-background-color: #e1eaf0;
-        color: #1e293b;
-    }</string>
    </property>
    <property name="readOnly">
     <bool>true</bool>

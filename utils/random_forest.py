@@ -69,68 +69,69 @@ def train_random_forest(
             db_manager = DatabaseManager(db_path=db_path)
             conn = db_manager.get_connection()
             
-            progress.send("\n[1/2] 读取DGA数据...")
             try:
-                dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
-                df_dga = pd.read_sql_query(dga_query, conn)
-                if not df_dga.empty:
-                    progress.send(f"  DGA数据: {len(df_dga)} 条")
-                    logger.info(f"DGA数据: {len(df_dga)} 条")
-            except Exception as e:
-                logger.warning(f"读取DGA数据失败: {e}")
-                df_dga = pd.DataFrame()
-            
-            progress.send("\n[2/2] 读取四通道PD数据...")
-            pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
-            
-            pd_data_by_sample = {}
-            
-            for ch_table in pd_channels:
+                progress.send("\n[1/2] 读取DGA数据...")
                 try:
-                    if not _validate_table_name(ch_table):
-                        logger.warning(f"无效的表名: {ch_table}")
-                        continue
-                    
-                    cols = ['sample_id', 'principal_components', 'fault_type', 'fault_location']
-                    cols_str = ', '.join(cols)
-                    ch_query = f"SELECT {cols_str} FROM {ch_table}"
-                    df_ch = pd.read_sql_query(ch_query, conn)
-                    
-                    if not df_ch.empty:
-                        for _, row in df_ch.iterrows():
-                            sample_id = row['sample_id']
-                            if sample_id is None:
-                                continue
-                            sample_num = str(sample_id).split('_')[-1]
-                            
-                            if sample_num not in pd_data_by_sample:
-                                pd_data_by_sample[sample_num] = {
-                                    'pcs': [],
-                                    'fault_type': row['fault_type'],
-                                    'fault_location': row['fault_location']
-                                }
-                            
-                            pc_data = json.loads(str(row['principal_components']))
-                            pd_data_by_sample[sample_num]['pcs'].append(pc_data)
-                        
-                        logger.info(f"从 {ch_table} 读取数据")
+                    dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
+                    df_dga = pd.read_sql_query(dga_query, conn)
+                    if not df_dga.empty:
+                        progress.send(f"  DGA数据: {len(df_dga)} 条")
+                        logger.info(f"DGA数据: {len(df_dga)} 条")
                 except Exception as e:
-                    logger.warning(f"读取 {ch_table} 失败: {e}")
-            
-            pd_fused_data = []
-            for sample_num, data in pd_data_by_sample.items():
-                if len(data['pcs']) == 4:
-                    fused_pc = np.concatenate(data['pcs'])
-                    pd_fused_data.append({
-                        'principal_components': fused_pc,
-                        'fault_type': data['fault_type'],
-                        'fault_location': data['fault_location']
-                    })
-            
-            progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
-            logger.info(f"PD融合数据: {len(pd_fused_data)} 条")
-            
-            conn.close()
+                    logger.warning(f"读取DGA数据失败: {e}")
+                    df_dga = pd.DataFrame()
+                
+                progress.send("\n[2/2] 读取四通道PD数据...")
+                pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
+                
+                pd_data_by_sample = {}
+                
+                for ch_table in pd_channels:
+                    try:
+                        if not _validate_table_name(ch_table):
+                            logger.warning(f"无效的表名: {ch_table}")
+                            continue
+                        
+                        cols = ['sample_id', 'principal_components', 'fault_type', 'fault_location']
+                        cols_str = ', '.join(cols)
+                        ch_query = f"SELECT {cols_str} FROM {ch_table}"
+                        df_ch = pd.read_sql_query(ch_query, conn)
+                        
+                        if not df_ch.empty:
+                            for _, row in df_ch.iterrows():
+                                sample_id = row['sample_id']
+                                if sample_id is None:
+                                    continue
+                                sample_num = str(sample_id).split('_')[-1]
+                                
+                                if sample_num not in pd_data_by_sample:
+                                    pd_data_by_sample[sample_num] = {
+                                        'pcs': [],
+                                        'fault_type': row['fault_type'],
+                                        'fault_location': row['fault_location']
+                                    }
+                                
+                                pc_data = json.loads(str(row['principal_components']))
+                                pd_data_by_sample[sample_num]['pcs'].append(pc_data)
+                            
+                            logger.info(f"从 {ch_table} 读取数据")
+                    except Exception as e:
+                        logger.warning(f"读取 {ch_table} 失败: {e}")
+                
+                pd_fused_data = []
+                for sample_num, data in pd_data_by_sample.items():
+                    if len(data['pcs']) == 4:
+                        fused_pc = np.concatenate(data['pcs'])
+                        pd_fused_data.append({
+                            'principal_components': fused_pc,
+                            'fault_type': data['fault_type'],
+                            'fault_location': data['fault_location']
+                        })
+                
+                progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
+                logger.info(f"PD融合数据: {len(pd_fused_data)} 条")
+            finally:
+                conn.close()
             
         else:
             df = pd.read_excel(data_file)

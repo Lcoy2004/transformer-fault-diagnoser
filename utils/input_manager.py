@@ -7,7 +7,8 @@ from typing import List, Optional, Dict
 from PySide6.QtWidgets import QTableWidget, QComboBox, QTableWidgetItem
 from PySide6.QtCore import Qt
 
-from config.constants import INPUT_CONFIGS
+from config.constants import INPUT_CONFIGS, TYPE_TO_TABLE_MAP
+from database.db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +52,19 @@ class InputManager:
         
         columns = config['columns']
         descriptions = config.get('descriptions', [''] * len(columns))
+        data_type = config['type']
         
-        logger.info(f"更新表格: {display_name} -> {config['type']}, 特征数: {len(columns)}")
+        logger.info(f"更新表格: {display_name} -> {data_type}, 特征数: {len(columns)}")
         
         self._table.clear()
         self._table.setColumnCount(3)
         self._table.setHorizontalHeaderLabels(['特征', '数值', '备注'])
         self._table.setRowCount(len(columns))
+        
+        self._table.verticalHeader().setDefaultSectionSize(32)
+        self._table.verticalHeader().setVisible(False)
+        
+        default_values = self._get_default_values(data_type, columns)
         
         for row, (col_name, desc) in enumerate(zip(columns, descriptions)):
             name_item = QTableWidgetItem(col_name)
@@ -65,7 +72,8 @@ class InputManager:
             name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 0, name_item)
             
-            value_item = QTableWidgetItem('0.0')
+            default_val = default_values.get(col_name.lower(), 0.0)
+            value_item = QTableWidgetItem(str(default_val))
             value_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, 1, value_item)
             
@@ -77,7 +85,27 @@ class InputManager:
         
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.update()
-        logger.info(f"表格更新完成: {config['type']}, 特征: {columns}")
+        logger.info(f"表格更新完成: {data_type}, 特征: {columns}")
+    
+    def _get_default_values(self, data_type: str, columns: List[str]) -> Dict[str, float]:
+        """从数据库获取默认值（最新一行数据），若无数据则返回0"""
+        table_name = TYPE_TO_TABLE_MAP.get(data_type)
+        default_values = {col.lower(): 0.0 for col in columns}
+        
+        if not table_name:
+            return default_values
+        
+        try:
+            db = DatabaseManager()
+            latest_row = db.get_latest_row(table_name)
+            if latest_row:
+                for k, v in latest_row.items():
+                    if k.lower() != 'id':
+                        default_values[k.lower()] = v
+        except Exception as e:
+            logger.warning(f"获取默认值失败: {e}")
+        
+        return default_values
     
     def _on_type_changed(self, index: int) -> None:
         """输入类型变化处理"""
@@ -85,9 +113,30 @@ class InputManager:
             self._cache_current_data_with_type(self._previous_type)
         
         self._update_table()
-        self._load_cached_data()
+        self._load_cached_data_if_exists()
         
         self._previous_type = self.get_type()
+    
+    def _load_cached_data_if_exists(self) -> None:
+        """仅当缓存存在时加载数据"""
+        data_type = self.get_type()
+        if data_type not in self._cache:
+            return
+        
+        data = self._cache[data_type]
+        table_rows = self._table.rowCount()
+        data_len = len(data)
+        
+        if data_len == table_rows:
+            for row, value in enumerate(data):
+                item = QTableWidgetItem(str(value))
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._table.setItem(row, 1, item)
+        else:
+            logger.warning(
+                f"缓存数据长度({data_len})与表格行数({table_rows})不匹配，"
+                f"类型: {data_type}，跳过加载缓存"
+            )
     
     def _cache_current_data_with_type(self, data_type: str) -> None:
         """缓存当前输入数据到指定类型"""
@@ -116,6 +165,16 @@ class InputManager:
         Returns:
             输入数据列表，如果数据无效返回 None
         """
+        data, _ = self.validate_and_get_data()
+        return data
+    
+    def validate_and_get_data(self):
+        """
+        验证并获取输入数据
+        
+        Returns:
+            tuple: (data: List[float] or None, error_msg: str or None)
+        """
         data = []
         invalid_rows = []
         
@@ -130,12 +189,18 @@ class InputManager:
                 invalid_rows.append((row, f"无效格式: '{item.text()}'"))
         
         if invalid_rows:
-            for row, reason in invalid_rows:
-                logger.warning(f"第{row+1}行数据{reason}")
-            return None
+            col_names = []
+            for r, _ in invalid_rows:
+                item = self._table.item(r, 0)
+                if item:
+                    col_names.append(item.text())
+            error_parts = [f"  - {name}: {reason}" for (_, reason), name in zip(invalid_rows, col_names)]
+            error_msg = f"以下输入数据有误:\n" + "\n".join(error_parts)
+            logger.warning(f"输入验证失败: {error_msg}")
+            return None, error_msg
         
         logger.debug(f"获取输入数据: {data}")
-        return data
+        return data, None
     
     def set_data(self, data: List[float]) -> bool:
         """
@@ -161,28 +226,9 @@ class InputManager:
     def clear(self) -> None:
         """清空输入数据"""
         for row in range(self._table.rowCount()):
-            item = QTableWidgetItem('0.0')
+            item = QTableWidgetItem('')
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, 1, item)
-    
-    def _load_cached_data(self) -> None:
-        """加载缓存数据到表格"""
-        data_type = self.get_type()
-        if data_type in self._cache:
-            data = self._cache[data_type]
-            table_rows = self._table.rowCount()
-            data_len = len(data)
-            
-            if data_len == table_rows:
-                for row, value in enumerate(data):
-                    item = QTableWidgetItem(str(value))
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self._table.setItem(row, 1, item)
-            else:
-                logger.warning(
-                    f"缓存数据长度({data_len})与表格行数({table_rows})不匹配，"
-                    f"类型: {data_type}，跳过加载缓存"
-                )
     
     def get_all_cached_data(self) -> Dict[str, List[float]]:
         """
@@ -229,3 +275,21 @@ class InputManager:
         current_type = self.get_type()
         self._cache_current_data_with_type(current_type)
         self._previous_type = current_type
+    
+    def get_data_summary(self) -> str:
+        """
+        获取已输入数据的摘要信息
+        
+        Returns:
+            数据摘要字符串
+        """
+        if not self._cache:
+            return "尚未输入任何数据"
+        
+        lines = []
+        for data_type, data in self._cache.items():
+            non_zero = sum(1 for v in data if v != 0.0)
+            status = "已填写" if non_zero > 0 else "全为零"
+            lines.append(f"  {data_type}: {status} ({non_zero}/{len(data)} 个非零值)")
+        
+        return "已输入数据:\n" + "\n".join(lines)

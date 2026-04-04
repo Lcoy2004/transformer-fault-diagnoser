@@ -6,13 +6,13 @@ import logging
 import re
 import sqlite3
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# SQL 建表语句
-CREATE_TABLE_SQL = {
-    'oil_chromatography': """
+
+def _create_dga_table_sql() -> str:
+    return """
         CREATE TABLE IF NOT EXISTS oil_chromatography (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sample_id TEXT NOT NULL,
@@ -21,156 +21,44 @@ CREATE_TABLE_SQL = {
             sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             source_file TEXT
         )
-    """,
+    """
 
-    'fusion_features_dga': """
-        CREATE TABLE IF NOT EXISTS fusion_features_dga (
+def _create_pca_table_sql(table_name: str) -> str:
+    return f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sample_id TEXT NOT NULL,
             model_id TEXT,
             principal_components TEXT,
             fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features_pd_ch1': """
-        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch1 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features_pd_ch2': """
-        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch2 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features_pd_ch3': """
-        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch3 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'fusion_features_pd_ch4': """
-        CREATE TABLE IF NOT EXISTS fusion_features_pd_ch4 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            model_id TEXT,
-            principal_components TEXT,
-            fault_type TEXT, fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-
-    'pd_channel_1': """
-        CREATE TABLE IF NOT EXISTS pd_channel_1 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            filename TEXT,
-            ch1_band1_energy REAL,
-            ch1_band2_energy REAL,
-            ch1_band3_energy REAL,
-            ch1_band4_energy REAL,
-            ch1_kurtosis REAL,
-            ch1_main_amp REAL,
-            ch1_main_freq REAL,
-            ch1_mean REAL,
-            ch1_peak REAL,
-            ch1_pulse_width REAL,
-            ch1_skewness REAL,
-            ch1_var REAL,
-            fault_type TEXT,
-            fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'pd_channel_2': """
-        CREATE TABLE IF NOT EXISTS pd_channel_2 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            filename TEXT,
-            ch2_band1_energy REAL,
-            ch2_band2_energy REAL,
-            ch2_band3_energy REAL,
-            ch2_band4_energy REAL,
-            ch2_kurtosis REAL,
-            ch2_main_amp REAL,
-            ch2_main_freq REAL,
-            ch2_mean REAL,
-            ch2_peak REAL,
-            ch2_pulse_width REAL,
-            ch2_skewness REAL,
-            ch2_var REAL,
-            fault_type TEXT,
-            fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'pd_channel_3': """
-        CREATE TABLE IF NOT EXISTS pd_channel_3 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            filename TEXT,
-            ch3_band1_energy REAL,
-            ch3_band2_energy REAL,
-            ch3_band3_energy REAL,
-            ch3_band4_energy REAL,
-            ch3_kurtosis REAL,
-            ch3_main_amp REAL,
-            ch3_main_freq REAL,
-            ch3_mean REAL,
-            ch3_peak REAL,
-            ch3_pulse_width REAL,
-            ch3_skewness REAL,
-            ch3_var REAL,
-            fault_type TEXT,
-            fault_location TEXT,
-            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT
-        )
-    """,
-    'pd_channel_4': """
-        CREATE TABLE IF NOT EXISTS pd_channel_4 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sample_id TEXT NOT NULL,
-            filename TEXT,
-            ch4_band1_energy REAL,
-            ch4_band2_energy REAL,
-            ch4_band3_energy REAL,
-            ch4_band4_energy REAL,
-            ch4_kurtosis REAL,
-            ch4_main_amp REAL,
-            ch4_main_freq REAL,
-            ch4_mean REAL,
-            ch4_peak REAL,
-            ch4_pulse_width REAL,
-            ch4_skewness REAL,
-            ch4_var REAL,
-            fault_type TEXT,
-            fault_location TEXT,
             sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             source_file TEXT
         )
     """
+
+def _create_pd_table_sql(channel: int) -> str:
+    return f"""
+        CREATE TABLE IF NOT EXISTS pd_channel_{channel} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            filename TEXT,
+            ch{channel}_band1_energy REAL, ch{channel}_band2_energy REAL,
+            ch{channel}_band3_energy REAL, ch{channel}_band4_energy REAL,
+            ch{channel}_kurtosis REAL, ch{channel}_main_amp REAL,
+            ch{channel}_main_freq REAL, ch{channel}_mean REAL,
+            ch{channel}_peak REAL, ch{channel}_pulse_width REAL,
+            ch{channel}_skewness REAL, ch{channel}_var REAL,
+            fault_type TEXT, fault_location TEXT,
+            sample_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_file TEXT
+        )
+    """
+
+CREATE_TABLE_SQL = {
+    'oil_chromatography': _create_dga_table_sql(),
+    **{f'fusion_features_pd_ch{i}': _create_pca_table_sql(f'fusion_features_pd_ch{i}') for i in range(1, 5)},
+    **{f'fusion_features_dga': _create_pca_table_sql('fusion_features_dga')},
+    **{f'pd_channel_{i}': _create_pd_table_sql(i) for i in range(1, 5)}
 }
 
 
@@ -248,6 +136,27 @@ class DatabaseManager:
     def _is_valid_table_name(self, table_name: str) -> bool:
         """验证表名是否合法"""
         return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
+    
+    def get_latest_row(self, table_name: str) -> Optional[Dict[str, float]]:
+        """
+        获取表的最新一行数据（按id降序）
+        
+        Args:
+            table_name: 表名
+            
+        Returns:
+            字典形式的最新行数据，如果表为空返回None
+        """
+        if not self._is_valid_table_name(table_name):
+            raise ValueError(f"非法表名: {table_name}")
+        
+        with self._connect() as conn:
+            cursor = conn.execute(f"SELECT * FROM {table_name} ORDER BY id DESC LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                columns = [desc[0] for desc in cursor.description]
+                return {col: float(row[col]) if row[col] is not None else 0.0 for col in columns}
+            return None
 
 
 class ConnectionContext:
@@ -264,10 +173,10 @@ class ConnectionContext:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.conn.commit()
+            self.conn.commit()  # type: ignore
         else:
-            self.conn.rollback()
-        self.conn.close()
+            self.conn.rollback()  # type: ignore
+        self.conn.close()  # type: ignore
         return False
 
 

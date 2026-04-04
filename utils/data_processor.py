@@ -56,10 +56,11 @@ class DataProcessor:
         """
         self._ensure_init()
         
-        # 自动检测表名
+        pre_read_df = None
+        
         if table_name is None:
-            df = pd.read_excel(excel_file)
-            table_name = self._importer.detect_data_type(df)
+            pre_read_df = pd.read_excel(excel_file)
+            table_name = self._importer.detect_data_type(pre_read_df)
             if table_name is None:
                 raise ValueError("无法识别数据类型，请手动指定表名")
         
@@ -67,7 +68,8 @@ class DataProcessor:
             excel_file=excel_file,
             table_name=table_name,
             progress_callback=progress_callback,
-            progress_value_callback=progress_value_callback
+            progress_value_callback=progress_value_callback,
+            pre_read_df=pre_read_df
         )
     
     def get_all_tables(self) -> List[str]:
@@ -182,5 +184,3 @@ class DataProcessor:
         """确保预测器已加载"""
         if self._predictor is None:
             self._predictor = Predictor()
-        if self._predictor is None:
-            raise RuntimeError("预测器初始化失败")

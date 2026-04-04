@@ -42,6 +42,18 @@ class MainWindow(QMainWindow):
         self.ui = main_ui.Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.progressBar.setValue(0)
+        self._setup_grid_stretch()
+    
+    def _setup_grid_stretch(self):
+        """设置网格布局行拉伸"""
+        grid = self.ui.gridLayout
+        grid.setRowStretch(0, 0)
+        grid.setRowStretch(1, 0)
+        grid.setRowStretch(2, 0)
+        grid.setRowStretch(3, 0)
+        grid.setRowStretch(4, 0)
+        grid.setRowStretch(5, 0)
+        grid.setRowStretch(6, 0)
     
     def _init_managers(self):
         """初始化管理器"""
@@ -57,7 +69,7 @@ class MainWindow(QMainWindow):
             self.ui.showdata_tableWidget,
             self._data
         )
-        self._model = ModelManager(self._data, self._ui, self._thread)
+        self._model = ModelManager(self._data, self._ui, self._thread, self._set_buttons_enabled, self._confirm_dialog)
         self._predictor = PredictManager(
             self, self._data, self._input, self._ui, self._thread,
             self._set_buttons_enabled, notify
@@ -79,7 +91,7 @@ class MainWindow(QMainWindow):
         self.ui.table_selector.currentIndexChanged.connect(self._on_table_changed)
     
     def _set_buttons_enabled(self, enabled: bool):
-        """设置所有按钮的启用状态"""
+        """设置所有按钮和菜单的启用状态"""
         self.ui.pushButton.setEnabled(enabled)
         self.ui.btn_pca.setEnabled(enabled)
         self.ui.btn_rf.setEnabled(enabled)
@@ -87,6 +99,18 @@ class MainWindow(QMainWindow):
         self.ui.showlog_btn.setEnabled(enabled)
         self.ui.input_combobox.setEnabled(enabled)
         self.ui.table_selector.setEnabled(enabled)
+        self.ui.action_6.setEnabled(enabled)
+        self.ui.action.setEnabled(enabled)
+    
+    @staticmethod
+    def _confirm_dialog(title: str, message: str) -> bool:
+        """显示确认对话框"""
+        reply = QMessageBox.question(
+            None, title, message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        return reply == QMessageBox.StandardButton.Yes
     
     def _refresh_tables(self):
         """刷新表列表"""
@@ -132,8 +156,6 @@ class MainWindow(QMainWindow):
     def _import_data(self):
         """导入数据"""
         try:
-            table_name = self._table.get_current_table()
-            
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "选择数据文件",
@@ -143,13 +165,30 @@ class MainWindow(QMainWindow):
             
             if not file_path:
                 return
+            
+            table_name = self._table.get_current_table()
+            
+            if not table_name:
+                QMessageBox.warning(self, "提示", "请先在数据管理中选择目标表")
+                return
+            
+            reply = QMessageBox.question(
+                self, "确认导入",
+                f"将导入数据到表「{table_name}」\n\n文件: {os.path.basename(file_path)}\n\n确认导入？",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            
             self._ui.clear_output()
+            self._set_buttons_enabled(False)
             
             worker = self._thread.start(self._data.import_data, file_path, table_name)
             worker.progress.connect(self._ui.update_output)
             worker.progress_value.connect(self._ui.update_progress)
             worker.finished.connect(self._on_import_done)
-            worker.error.connect(lambda msg: QMessageBox.warning(self, "错误", msg))
+            worker.error.connect(lambda msg: self._on_import_error(msg))
             worker.start()
             
         except Exception as e:
@@ -158,9 +197,16 @@ class MainWindow(QMainWindow):
     
     def _on_import_done(self, result: int):
         """导入完成"""
+        self._set_buttons_enabled(True)
         self._ui.update_output(f"导入完成: {result} 条记录")
         notify(f"导入完成: {result} 条记录")
         self._refresh_tables()
+    
+    def _on_import_error(self, error_msg: str):
+        """导入失败"""
+        self._set_buttons_enabled(True)
+        self._logger.error(f"导入数据失败: {error_msg}")
+        QMessageBox.warning(self, "错误", f"导入失败: {error_msg}")
     
     def _show_about(self):
         """显示关于窗口"""
