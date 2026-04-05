@@ -2,6 +2,17 @@
 主程序入口
 """
 
+import sys
+
+# 隐藏控制台窗口（Windows）- 必须在最开始执行
+if sys.platform == 'win32':
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    user32 = ctypes.windll.user32
+    console_window = kernel32.GetConsoleWindow()
+    if console_window:
+        user32.ShowWindow(console_window, 0)  # SW_HIDE = 0
+
 import os
 os.environ['QT_LOGGING_TO_STDOUT'] = '0'
 os.environ['QT_DEBUG_PLUGINS'] = '0'
@@ -11,7 +22,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import logging
-import sys
 from datetime import datetime
 from PySide6.QtCore import qInstallMessageHandler
 from PySide6.QtWidgets import (
