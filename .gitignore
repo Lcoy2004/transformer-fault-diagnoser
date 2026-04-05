@@ -39,6 +39,7 @@ venv.bak/
 *.onefile-build/
 *.dist/
 *.exe
+build.bat
 
 # Project specific - Data and models
 database/*.db
