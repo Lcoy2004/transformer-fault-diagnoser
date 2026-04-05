@@ -70,6 +70,9 @@ class TableManager:
             self._table.setHorizontalHeaderLabels(columns)
             self._table.setRowCount(len(data))
             
+            # 设置行高
+            self._table.verticalHeader().setDefaultSectionSize(36)
+            
             # 填充数据
             for row_idx, row in enumerate(data):
                 for col_idx, value in enumerate(row):

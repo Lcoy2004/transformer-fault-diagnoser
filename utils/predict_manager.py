@@ -86,7 +86,7 @@ class PredictManager:
         self._set_buttons(False)
         self._ui.clear_output()
         self._ui.update_output(f"[{mode_desc.get(mode_key, '未知')}]")
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
         self._ui.update_progress(0)
         
         worker = self._thread.start(self._do_predict, all_data)
@@ -162,9 +162,9 @@ class PredictManager:
         self._set_buttons(True)
         
         self._ui.clear_output()
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
         self._ui.update_output("故障诊断结果")
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
         
         mode = result['mode']
         data = result['data']
@@ -176,7 +176,7 @@ class PredictManager:
         elif mode == 'pd_only':
             self._display_pd_result(data)
         
-        self._ui.update_output("\n" + "=" * 50)
+        self._ui.update_output("\n" + "=" * 40)
         self._ui.update_progress(100)
         self._notify("诊断完成")
     

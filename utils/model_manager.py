@@ -73,9 +73,9 @@ class ModelManager:
     
     def _on_pca_finished(self, result: Dict[str, Any]) -> None:
         """PCA 训练完成处理"""
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
         self._ui.update_output("PCA 训练完成")
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
         
         all_pcas = result.get('all_pcas', {})
         all_scalers = result.get('all_scalers', {})
@@ -91,10 +91,10 @@ class ModelManager:
             self._ui.update_output(f"  累计方差贡献率: {cumulative_variance[-1]:.4f}")
             self._ui.update_output(f"  各成分方差贡献: {[f'{v:.4f}' for v in explained_variance]}")
         
-        self._ui.update_output("\n" + "=" * 50)
+        self._ui.update_output("\n" + "=" * 40)
         self._ui.update_output(f"共训练 {len(all_pcas)} 个PCA模型")
         self._ui.update_output(f"共处理 {sum(len(d['X']) for d in processed_data)} 个样本")
-        self._ui.update_output("=" * 50)
+        self._ui.update_output("=" * 40)
     
     def _on_rf_finished(self, result: Dict[str, Any]) -> None:
         """随机森林训练完成处理"""
@@ -103,9 +103,9 @@ class ModelManager:
             # 新格式：包含所有模型结果
             all_models = result['all_models']
             
-            self._ui.update_output("=" * 50)
+            self._ui.update_output("=" * 40)
             self._ui.update_output("模型训练完成")
-            self._ui.update_output("=" * 50)
+            self._ui.update_output("=" * 40)
             
             # 显示各模型准确率
             for model_name, model_result in all_models.items():
@@ -119,13 +119,12 @@ class ModelManager:
                 self._ui.update_output(f"  模型路径: {model_result.get('model_path', 'N/A')}")
             
             # 显示融合策略说明
-            self._ui.update_output("\n" + "=" * 50)
+            self._ui.update_output("\n" + "=" * 40)
             self._ui.update_output("决策级融合策略:")
-            self._ui.update_output("1. DGA模型: 预测故障大类（正常、过热、放电）")
-            self._ui.update_output("2. PD融合模型: 将四通道数据融合后预测放电细类")
-            self._ui.update_output("3. 综合融合模型: 融合DGA和PD数据进行预测")
-            self._ui.update_output("4. 决策融合: DGA预测放电时，用PD模型细化放电类型")
-            self._ui.update_output("=" * 50)
+            self._ui.update_output("1. DGA模型: 预测故障大类")
+            self._ui.update_output("2. PD融合模型: 预测放电细类")
+            self._ui.update_output("3. 决策融合: DGA放电时用PD细化")
+            self._ui.update_output("=" * 40)
         else:
             # 旧格式：只有单个模型结果
             self._ui.update_output(f"模型训练完成")

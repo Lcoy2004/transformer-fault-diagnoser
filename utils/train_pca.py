@@ -183,7 +183,7 @@ def train_pca_model(
             progress.send(error_msg)
             raise ValueError(error_msg)
         
-        logger.info("=" * 50)
+        logger.info("=" * 40)
         logger.info("PCA降维处理完成，各数据源独立保存")
         progress.send("PCA降维处理完成")
         progress.update(60)

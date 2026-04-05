@@ -60,9 +60,9 @@ def train_random_forest(
     progress = ProgressHelper(progress_callback, progress_value_callback)
     
     try:
-        progress.send("=" * 50)
+        progress.send("=" * 40)
         progress.send("开始训练随机森林模型")
-        progress.send("=" * 50)
+        progress.send("=" * 40)
         progress.update(5)
         
         if data_source == 'database':
@@ -167,9 +167,9 @@ def train_random_forest(
                 results['PD_FUSION'] = pd_result
                 progress.update(80)
         
-        progress.send("\n" + "=" * 50)
+        progress.send("\n" + "=" * 40)
         progress.send("模型训练完成汇总")
-        progress.send("=" * 50)
+        progress.send("=" * 40)
         for model_name, result in results.items():
             progress.send(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
         

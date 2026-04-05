@@ -387,8 +387,8 @@ class Ui_MainWindow(object):
 "    border-radius: 6px;\n"
 "    background-color: #E2E8F0;\n"
 "    text-align: center;\n"
-"    color: #64748B;\n"
-"    font-weight: 600;\n"
+"    color: #1E293B;\n"
+"    font-weight: 700;\n"
 "    min-height: 10px;\n"
 "}\n"
 "\n"
@@ -543,8 +543,8 @@ class Ui_MainWindow(object):
 
         self.showinput_tableWidget = QTableWidget(self.centralwidget)
         self.showinput_tableWidget.setObjectName(u"showinput_tableWidget")
-        self.showinput_tableWidget.setMinimumSize(QSize(0, 200))
-        self.showinput_tableWidget.setMaximumSize(QSize(16777215, 300))
+        self.showinput_tableWidget.setMinimumSize(QSize(0, 280))
+        self.showinput_tableWidget.setMaximumSize(QSize(16777215, 280))
         self.showinput_tableWidget.setFont(font2)
         self.showinput_tableWidget.setAlternatingRowColors(False)
 

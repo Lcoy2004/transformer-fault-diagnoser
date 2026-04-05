@@ -61,7 +61,7 @@ class InputManager:
         self._table.setHorizontalHeaderLabels(['特征', '数值', '备注'])
         self._table.setRowCount(len(columns))
         
-        self._table.verticalHeader().setDefaultSectionSize(32)
+        self._table.verticalHeader().setDefaultSectionSize(36)
         self._table.verticalHeader().setVisible(False)
         
         default_values = self._get_default_values(data_type, columns)
