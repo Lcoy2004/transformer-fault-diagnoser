@@ -47,8 +47,6 @@ class Predictor:
                 type_model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
                 location_model_path = f'{models_dir}/random_forest_{model_name.lower()}_location.pkl'
 
-                old_model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
-
                 if os.path.exists(type_model_path):
                     self.models_type[model_name] = joblib.load(type_model_path)
                     self._logger.info(f"[加载] {model_name} 类型模型成功")
@@ -58,10 +56,11 @@ class Predictor:
                         self._logger.info(f"[加载] {model_name} 位置模型成功")
                     else:
                         self._logger.warning(f"[警告] {model_name} 位置模型不存在")
-
-                elif os.path.exists(old_model_path):
-                    self.models[model_name] = joblib.load(old_model_path)
-                    self._logger.info(f"[加载] {model_name} 旧版模型成功")
+                else:
+                    old_model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
+                    if os.path.exists(old_model_path):
+                        self.models[model_name] = joblib.load(old_model_path)
+                        self._logger.info(f"[加载] {model_name} 旧版模型成功（建议重新训练）")
 
             if not self.models and not self.models_type:
                 self._logger.warning("[警告] 没有找到可用的随机森林模型")
@@ -147,12 +146,13 @@ class Predictor:
             if model_name in self.models_location:
                 location_model = self.models_location[model_name]
                 coords_pred = location_model.predict(X)[0]
-                
+
                 if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
+                    coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
                     x, y, z = coords_pred
                     fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
                 else:
-                    fault_location = str(coords_pred)
+                    fault_location = str(coords_pred) if coords_pred is not None else None
             else:
                 fault_location = None
 

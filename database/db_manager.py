@@ -6,7 +6,7 @@ import logging
 import re
 import sqlite3
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 logger = logging.getLogger(__name__)
 
@@ -137,25 +137,34 @@ class DatabaseManager:
         """验证表名是否合法"""
         return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
     
-    def get_latest_row(self, table_name: str) -> Optional[Dict[str, float]]:
+    def get_latest_row(self, table_name: str) -> Optional[Dict[str, Any]]:
         """
         获取表的最新一行数据（按id降序）
-        
+
         Args:
             table_name: 表名
-            
+
         Returns:
             字典形式的最新行数据，如果表为空返回None
         """
         if not self._is_valid_table_name(table_name):
             raise ValueError(f"非法表名: {table_name}")
-        
+
         with self._connect() as conn:
             cursor = conn.execute(f"SELECT * FROM {table_name} ORDER BY id DESC LIMIT 1")
             row = cursor.fetchone()
             if row:
                 columns = [desc[0] for desc in cursor.description]
-                return {col: float(row[col]) if row[col] is not None else 0.0 for col in columns}
+                result = {}
+                for col in columns:
+                    value = row[col]
+                    if value is None:
+                        result[col] = 0.0
+                    elif isinstance(value, (int, float)):
+                        result[col] = float(value)
+                    else:
+                        result[col] = value
+                return result
             return None
 
 
@@ -172,11 +181,13 @@ class ConnectionContext:
         return self.conn
     
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.conn is None:
+            return False
         if exc_type is None:
-            self.conn.commit()  # type: ignore
+            self.conn.commit()
         else:
-            self.conn.rollback()  # type: ignore
-        self.conn.close()  # type: ignore
+            self.conn.rollback()
+        self.conn.close()
         return False
 
 

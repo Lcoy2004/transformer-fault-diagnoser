@@ -62,46 +62,43 @@ def train_pca_model(
             progress.send("从数据库读取数据...")
             progress.update(10)
             db_manager = DatabaseManager(db_path=db_path)
-            conn = db_manager.get_connection()
-            
+
             table_data = {}
-            
-            for table_name, config in TABLE_CONFIGS.items():
-                try:
-                    # 跳过PCA特征表，只读取原始数据表
-                    if config.get('is_pca', False):
-                        continue
-                    if not _validate_table_name(table_name):
-                        logger.warning(f"无效的表名: {table_name}")
-                        continue
-                    
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-                        (table_name,)
-                    )
-                    if cursor.fetchone():
-                        features = config['features']
-                        label_col = config['label_col']
-                        location_col = config['location_col']
-                        
-                        cols_str = ', '.join(features + [label_col, location_col])
-                        query = f"SELECT {cols_str} FROM {table_name}"
-                        df_table = pd.read_sql_query(query, conn)
-                        
-                        if not df_table.empty:
-                            table_data[table_name] = {
-                                'data': df_table,
-                                'features': features,
-                                'source': config['type']
-                            }
-                            logger.info(f"成功读取表 {table_name}，形状: {df_table.shape}")
-                            progress.send(f"成功读取表 {table_name}，形状: {df_table.shape}")
-                except Exception as e:
-                    logger.error(f"读取表 {table_name} 失败: {e}")
-                    progress.send(f"读取表 {table_name} 失败: {e}")
-            
-            conn.close()
+
+            with db_manager._connect() as conn:
+                for table_name, config in TABLE_CONFIGS.items():
+                    try:
+                        if config.get('is_pca', False):
+                            continue
+                        if not _validate_table_name(table_name):
+                            logger.warning(f"无效的表名: {table_name}")
+                            continue
+
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                            (table_name,)
+                        )
+                        if cursor.fetchone():
+                            features = config['features']
+                            label_col = config['label_col']
+                            location_col = config['location_col']
+
+                            cols_str = ', '.join(features + [label_col, location_col])
+                            query = f"SELECT {cols_str} FROM {table_name}"
+                            df_table = pd.read_sql_query(query, conn)
+
+                            if not df_table.empty:
+                                table_data[table_name] = {
+                                    'data': df_table,
+                                    'features': features,
+                                    'source': config['type']
+                                }
+                                logger.info(f"成功读取表 {table_name}，形状: {df_table.shape}")
+                                progress.send(f"成功读取表 {table_name}，形状: {df_table.shape}")
+                    except Exception as e:
+                        logger.error(f"读取表 {table_name} 失败: {e}")
+                        progress.send(f"读取表 {table_name} 失败: {e}")
             
             if not table_data:
                 error_msg = "没有找到有效的数据表"
@@ -209,13 +206,12 @@ def train_pca_model(
             progress.send("将PCA结果保存到数据库...")
             progress.update(80)
             db_manager = DatabaseManager(db_path=db_path)
-            conn = db_manager.get_connection()
-            
-            try:
+
+            with db_manager._connect() as conn:
                 cursor = conn.cursor()
-                
+
                 model_id = f"PCA_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                
+
                 for table_name in PCA_TABLE_MAPPING.values():
                     try:
                         if not _validate_table_name(table_name):
@@ -225,47 +221,44 @@ def train_pca_model(
                         logger.info(f"已清空 {table_name} 表")
                     except Exception as e:
                         logger.warning(f"清空 {table_name} 表失败: {e}")
-                
+
                 for i, data in enumerate(processed_data):
                     source = data['source']
                     X_source = data['X']
                     y_source = data['y']
                     locations_source = data['locations']
-                    
+
                     if source in PCA_TABLE_MAPPING:
                         table_name = PCA_TABLE_MAPPING[source]
                         if not _validate_table_name(table_name):
                             logger.warning(f"无效的表名: {table_name}")
                             continue
-                        
+
                         insert_query = f"""
-                        INSERT INTO {table_name} 
+                        INSERT INTO {table_name}
                         (sample_id, model_id, principal_components, fault_type, fault_location, source_file)
                         VALUES (?, ?, ?, ?, ?, ?)
                         """
-                        
+
                         inserted_count = 0
                         for j, (pc_values, fault_type, fault_location) in enumerate(zip(X_source, y_source, locations_source)):
                             sample_id = f"{source}_{j+1}"
                             pc_json = json.dumps(pc_values.tolist())
-                            
+
                             params = [sample_id, model_id, pc_json, fault_type, fault_location, source]
-                            
+
                             try:
                                 cursor.execute(insert_query, params)
                                 inserted_count += 1
                             except Exception as e:
                                 logger.error(f"插入 {source} 第 {j+1} 条数据失败: {e}")
-                        
+
                         logger.info(f"成功将 {inserted_count} 条 {source} PCA结果保存到 {table_name}")
                         progress.send(f"{source} 数据已保存: {inserted_count} 条")
-                
-                conn.commit()
+
                 logger.info("PCA结果已保存到数据库")
                 progress.send("PCA结果已保存到数据库")
                 progress.update(95)
-            finally:
-                conn.close()
         except Exception as e:
             error_msg = f"保存PCA结果到数据库失败: {e}"
             logger.error(error_msg)

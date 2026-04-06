@@ -92,21 +92,21 @@ def train_random_forest(
         
         if data_source == 'database':
             db_manager = DatabaseManager(db_path=db_path)
-            conn = db_manager.get_connection()
-            
-            try:
-                progress.send("\n[1/2] 读取DGA数据...")
+
+            with db_manager._connect() as conn:
                 try:
-                    dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
-                    df_dga = pd.read_sql_query(dga_query, conn)
-                    if not df_dga.empty:
-                        progress.send(f"  DGA数据: {len(df_dga)} 条")
-                        logger.info(f"DGA数据: {len(df_dga)} 条")
-                except Exception as e:
-                    logger.warning(f"读取DGA数据失败: {e}")
-                    df_dga = pd.DataFrame()
-                
-                progress.send("\n[2/2] 读取四通道PD数据...")
+                    progress.send("\n[1/2] 读取DGA数据...")
+                    try:
+                        dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
+                        df_dga = pd.read_sql_query(dga_query, conn)
+                        if not df_dga.empty:
+                            progress.send(f"  DGA数据: {len(df_dga)} 条")
+                            logger.info(f"DGA数据: {len(df_dga)} 条")
+                    except Exception as e:
+                        logger.warning(f"读取DGA数据失败: {e}")
+                        df_dga = pd.DataFrame()
+
+                    progress.send("\n[2/2] 读取四通道PD数据...")
                 pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
                 
                 pd_data_by_sample = {}
@@ -144,6 +144,8 @@ def train_random_forest(
                         logger.warning(f"读取 {ch_table} 失败: {e}")
                 
                 pd_fused_data = []
+                total_samples = len(pd_data_by_sample)
+                filtered_samples = 0
                 for sample_num, data in pd_data_by_sample.items():
                     if len(data['pcs']) == 4:
                         fused_pc = np.concatenate(data['pcs'])
@@ -152,12 +154,16 @@ def train_random_forest(
                             'fault_type': data['fault_type'],
                             'fault_location': data['fault_location']
                         })
-                
+                    else:
+                        filtered_samples += 1
+
+                if filtered_samples > 0:
+                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个因通道数不足({len(data['pcs'])}/4)被过滤")
+                    progress.send(f"  警告: {filtered_samples}/{total_samples} 样本通道不完整，已过滤")
+
                 progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
                 logger.info(f"PD融合数据: {len(pd_fused_data)} 条")
-            finally:
-                conn.close()
-            
+
         else:
             df = pd.read_excel(data_file)
             logger.info(f"从文件读取数据: {data_file}")

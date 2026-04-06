@@ -19,7 +19,7 @@ class InputManager:
     def __init__(self, combobox: QComboBox, table: QTableWidget):
         """
         初始化输入管理器
-        
+
         Args:
             combobox: 输入类型选择下拉框
             table: 输入数据表格
@@ -27,12 +27,13 @@ class InputManager:
         self._combobox = combobox
         self._table = table
         self._cache: Dict[str, List[float]] = {}
+        self._default_values_cache: Dict[str, Dict[str, float]] = {}
         self._previous_type: Optional[str] = None
-        
+
         self._init_combobox()
         self._update_table()
         self._previous_type = self.get_type()
-        
+
         self._combobox.currentIndexChanged.connect(self._on_type_changed)
     
     def _init_combobox(self) -> None:
@@ -88,13 +89,17 @@ class InputManager:
         logger.info(f"表格更新完成: {data_type}, 特征: {columns}")
     
     def _get_default_values(self, data_type: str, columns: List[str]) -> Dict[str, float]:
-        """从数据库获取默认值（最新一行数据），若无数据则返回0"""
+        """从数据库获取默认值（最新一行数据），使用缓存避免频繁查询"""
+        if data_type in self._default_values_cache:
+            return self._default_values_cache[data_type]
+
         table_name = TYPE_TO_TABLE_MAP.get(data_type)
         default_values = {col.lower(): 0.0 for col in columns}
-        
+
         if not table_name:
+            self._default_values_cache[data_type] = default_values
             return default_values
-        
+
         try:
             db = DatabaseManager()
             latest_row = db.get_latest_row(table_name)
@@ -102,9 +107,11 @@ class InputManager:
                 for k, v in latest_row.items():
                     if k.lower() != 'id':
                         default_values[k.lower()] = v
+            logger.debug(f"从数据库获取 {data_type} 默认值并缓存")
         except Exception as e:
             logger.warning(f"获取默认值失败: {e}")
-        
+
+        self._default_values_cache[data_type] = default_values
         return default_values
     
     def _on_type_changed(self, index: int) -> None:
