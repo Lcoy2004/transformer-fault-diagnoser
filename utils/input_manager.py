@@ -7,8 +7,7 @@ from typing import List, Optional, Dict
 from PySide6.QtWidgets import QTableWidget, QComboBox, QTableWidgetItem
 from PySide6.QtCore import Qt
 
-from config.constants import INPUT_CONFIGS, TYPE_TO_TABLE_MAP
-from database.db_manager import DatabaseManager
+from config.constants import INPUT_CONFIGS
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,6 @@ class InputManager:
         self._combobox = combobox
         self._table = table
         self._cache: Dict[str, List[float]] = {}
-        self._default_values_cache: Dict[str, Dict[str, float]] = {}
         self._previous_type: Optional[str] = None
 
         self._init_combobox()
@@ -89,30 +87,8 @@ class InputManager:
         logger.info(f"表格更新完成: {data_type}, 特征: {columns}")
     
     def _get_default_values(self, data_type: str, columns: List[str]) -> Dict[str, float]:
-        """从数据库获取默认值（最新一行数据），使用缓存避免频繁查询"""
-        if data_type in self._default_values_cache:
-            return self._default_values_cache[data_type]
-
-        table_name = TYPE_TO_TABLE_MAP.get(data_type)
-        default_values = {col.lower(): 0.0 for col in columns}
-
-        if not table_name:
-            self._default_values_cache[data_type] = default_values
-            return default_values
-
-        try:
-            db = DatabaseManager()
-            latest_row = db.get_latest_row(table_name)
-            if latest_row:
-                for k, v in latest_row.items():
-                    if k.lower() != 'id':
-                        default_values[k.lower()] = v
-            logger.debug(f"从数据库获取 {data_type} 默认值并缓存")
-        except Exception as e:
-            logger.warning(f"获取默认值失败: {e}")
-
-        self._default_values_cache[data_type] = default_values
-        return default_values
+        """获取默认值（全部为0）"""
+        return {col.lower(): 0.0 for col in columns}
     
     def _on_type_changed(self, index: int) -> None:
         """输入类型变化处理"""
@@ -148,22 +124,23 @@ class InputManager:
     def _cache_current_data_with_type(self, data_type: str) -> None:
         """缓存当前输入数据到指定类型"""
         data = []
-        has_invalid = False
+        invalid_count = 0
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 1)
             if item and item.text().strip():
                 try:
                     data.append(float(item.text().strip()))
                 except ValueError:
-                    logger.warning(f"第{row+1}行数据格式无效: '{item.text()}'")
-                    has_invalid = True
-                    break
+                    logger.warning(f"第{row+1}行数据格式无效: '{item.text()}'，使用默认值0.0")
+                    data.append(0.0)
+                    invalid_count += 1
             else:
                 data.append(0.0)
-        
-        if not has_invalid:
-            self._cache[data_type] = data
-            logger.debug(f"缓存数据: {data_type} = {data}")
+
+        self._cache[data_type] = data
+        if invalid_count > 0:
+            logger.warning(f"缓存 {data_type} 数据时，{invalid_count} 个无效值已替换为0.0")
+        logger.debug(f"缓存数据: {data_type} = {data}")
     
     def get_data(self) -> Optional[List[float]]:
         """

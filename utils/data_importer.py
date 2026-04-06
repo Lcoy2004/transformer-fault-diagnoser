@@ -217,7 +217,7 @@ class DataImporter:
     
     def _import_data_to_db(self, df, table_name, source_file, progress_value_callback=None):
         """
-        导入数据到数据库
+        导入数据到数据库（批量插入优化）
         
         Args:
             df: DataFrame对象
@@ -260,43 +260,49 @@ class DataImporter:
             placeholders = ', '.join(['?' for _ in db_columns])
             insert_query = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})"
             
-            imported_count = 0
             send_progress_value(40)
             total_count = len(df)
             
-            for _, row in df.iterrows():
-                current_index = imported_count + 1
-                sample_id = f"{TABLE_TYPE_MAP[table_name]}_{current_index}"
-                
-                params: list = [sample_id]
+            source_type = TABLE_TYPE_MAP[table_name]
+            label_mapping = LABEL_MAPPING.get(source_type, {})
+            
+            col_map = {}
+            for req_col in required_cols:
+                for col in df.columns:
+                    if req_col in col:
+                        col_map[req_col] = col
+                        break
+            
+            all_params = []
+            for idx, row in df.iterrows():
+                sample_id = f"{source_type}_{idx + 1}"
+                params = [sample_id]
                 
                 for req_col in required_cols:
                     value = None
-                    for col in df.columns:
-                        if req_col in col:
-                            value = row.get(col, None)
-                            if req_col == table_info['label_col'] and value is not None:
-                                source_type = TABLE_TYPE_MAP[table_name]
-                                if source_type == 'DGA':
-                                    value = LABEL_MAPPING['DGA'].get(str(value), value)
-                                else:
-                                    value = LABEL_MAPPING['PD'].get(str(value), value)
-                            break
+                    if req_col in col_map:
+                        mapped_col = col_map[req_col]
+                        value = row.get(mapped_col, None)
+                        if req_col == table_info['label_col'] and value is not None:
+                            value = label_mapping.get(str(value), value)
                     params.append(value)
                 
                 params.append(file_name)
-                
-                try:
-                    cursor.execute(insert_query, params)
-                    imported_count += 1
-                    
-                    if imported_count % max(1, total_count // 10) == 0:
-                        progress = 40 + (imported_count / total_count) * 50
-                        send_progress_value(int(progress))
-                        
-                except Exception as e:
-                    logger.error(f"导入第 {current_index} 条记录失败: {e}")
-                    continue
+                all_params.append(params)
+            
+            try:
+                cursor.executemany(insert_query, all_params)
+                imported_count = len(all_params)
+            except Exception as e:
+                logger.error(f"批量插入失败: {e}，尝试逐条插入")
+                imported_count = 0
+                for params in all_params:
+                    try:
+                        cursor.execute(insert_query, params)
+                        imported_count += 1
+                    except Exception as ex:
+                        logger.error(f"插入记录失败: {ex}")
+                        continue
             
             conn.commit()
             logger.info(f"成功导入 {imported_count} 条记录到表 {table_name}")

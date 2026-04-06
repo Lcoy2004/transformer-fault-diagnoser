@@ -39,28 +39,46 @@ class Predictor:
                 pca_path = f'{models_dir}/pca_{data_type}.pkl'
 
                 if os.path.exists(scaler_path) and os.path.exists(pca_path):
-                    self.scalers[data_type] = joblib.load(scaler_path)
-                    self.pcas[data_type] = joblib.load(pca_path)
-                    self._logger.info(f"[加载] {data_type} PCA模型成功")
+                    try:
+                        self.scalers[data_type] = joblib.load(scaler_path)
+                        self.pcas[data_type] = joblib.load(pca_path)
+                        self._logger.info(f"[加载] {data_type} PCA模型成功")
+                    except Exception as e:
+                        self._logger.error(f"[错误] 加载 {data_type} PCA模型失败: {e}")
+                        if data_type in self.scalers:
+                            del self.scalers[data_type]
+                        if data_type in self.pcas:
+                            del self.pcas[data_type]
 
             for model_name in ['DGA', 'PD_FUSION']:
                 type_model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
                 location_model_path = f'{models_dir}/random_forest_{model_name.lower()}_location.pkl'
 
                 if os.path.exists(type_model_path):
-                    self.models_type[model_name] = joblib.load(type_model_path)
-                    self._logger.info(f"[加载] {model_name} 类型模型成功")
+                    try:
+                        self.models_type[model_name] = joblib.load(type_model_path)
+                        self._logger.info(f"[加载] {model_name} 类型模型成功")
 
-                    if os.path.exists(location_model_path):
-                        self.models_location[model_name] = joblib.load(location_model_path)
-                        self._logger.info(f"[加载] {model_name} 位置模型成功")
-                    else:
-                        self._logger.warning(f"[警告] {model_name} 位置模型不存在")
+                        if os.path.exists(location_model_path):
+                            try:
+                                self.models_location[model_name] = joblib.load(location_model_path)
+                                self._logger.info(f"[加载] {model_name} 位置模型成功")
+                            except Exception as e:
+                                self._logger.error(f"[错误] 加载 {model_name} 位置模型失败: {e}")
+                        else:
+                            self._logger.warning(f"[警告] {model_name} 位置模型不存在")
+                    except Exception as e:
+                        self._logger.error(f"[错误] 加载 {model_name} 类型模型失败: {e}")
+                        if model_name in self.models_type:
+                            del self.models_type[model_name]
                 else:
                     old_model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
                     if os.path.exists(old_model_path):
-                        self.models[model_name] = joblib.load(old_model_path)
-                        self._logger.info(f"[加载] {model_name} 旧版模型成功（建议重新训练）")
+                        try:
+                            self.models[model_name] = joblib.load(old_model_path)
+                            self._logger.info(f"[加载] {model_name} 旧版模型成功（建议重新训练）")
+                        except Exception as e:
+                            self._logger.error(f"[错误] 加载 {model_name} 旧版模型失败: {e}")
 
             if not self.models and not self.models_type:
                 self._logger.warning("[警告] 没有找到可用的随机森林模型")
@@ -151,8 +169,13 @@ class Predictor:
                     coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
                     x, y, z = coords_pred
                     fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
+                elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
+                    coords_array = np.array(coords_pred[:3], dtype=float)
+                    coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
+                    x, y, z = coords_array
+                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
                 else:
-                    fault_location = str(coords_pred) if coords_pred is not None else None
+                    fault_location = None
             else:
                 fault_location = None
 
@@ -322,10 +345,16 @@ class Predictor:
                     coords_pred = location_model.predict(X_pca)[0]
                     
                     if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
+                        coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
                         x, y, z = coords_pred
                         fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
+                    elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
+                        coords_array = np.array(coords_pred[:3], dtype=float)
+                        coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
+                        x, y, z = coords_array
+                        fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
                     else:
-                        fault_location = str(coords_pred)
+                        fault_location = None
                 else:
                     fault_location = None
 

@@ -149,11 +149,14 @@ class PredictManager:
                 result['data'] = {'fusion': (fault_type, fault_location, 0.9)}
             else:
                 result['mode'] = 'pd_only'
-                result['data'] = self._data.predict_multi(
-                    all_data,
-                    progress_callback=progress_callback,
-                    progress_value_callback=progress_value_callback
-                )
+                try:
+                    result['data'] = self._data.predict_multi(
+                        all_data,
+                        progress_callback=progress_callback,
+                        progress_value_callback=progress_value_callback
+                    )
+                except Exception as e:
+                    result['error'] = str(e)
         except Exception as e:
             result['error'] = str(e)
 
@@ -210,7 +213,11 @@ class PredictManager:
         """
 
         if 'DGA' in data:
-            dga_type, dga_location = data['DGA']
+            dga_data = data['DGA']
+            if isinstance(dga_data, (tuple, list)) and len(dga_data) >= 2:
+                dga_type, dga_location = dga_data[0], dga_data[1]
+            else:
+                dga_type, dga_location = str(dga_data), None
             table_html += f"""
             <tr style="background:#fafafa;">
                 <td style="border:1px solid #ddd;padding:4px 6px;"><b>DGA分析</b></td>
@@ -220,7 +227,11 @@ class PredictManager:
             """
 
         if 'PD_FUSION' in data:
-            pd_type, pd_location = data['PD_FUSION']
+            pd_data = data['PD_FUSION']
+            if isinstance(pd_data, (tuple, list)) and len(pd_data) >= 2:
+                pd_type, pd_location = pd_data[0], pd_data[1]
+            else:
+                pd_type, pd_location = str(pd_data), None
             table_html += f"""
             <tr style="background:#fff;">
                 <td style="border:1px solid #ddd;padding:4px 6px;"><b>PD分析</b></td>
@@ -234,7 +245,11 @@ class PredictManager:
 
         # 综合诊断结果
         if 'fusion' in data:
-            fusion_type, fusion_location, confidence = data['fusion']
+            fusion_data = data['fusion']
+            if isinstance(fusion_data, (tuple, list)) and len(fusion_data) >= 3:
+                fusion_type, fusion_location, confidence = fusion_data[0], fusion_data[1], fusion_data[2]
+            else:
+                fusion_type, fusion_location, confidence = str(fusion_data), None, 0.0
             conf_color = "#2e7d32" if confidence >= 0.9 else "#f57c00" if confidence >= 0.8 else "#c62828"
 
             fusion_html = f"""
@@ -258,7 +273,11 @@ class PredictManager:
         self._ui.update_output_html(mode_html)
 
         if 'fusion' in data:
-            fusion_type, fusion_location, confidence = data['fusion']
+            fusion_data = data['fusion']
+            if isinstance(fusion_data, (tuple, list)) and len(fusion_data) >= 3:
+                fusion_type, fusion_location, confidence = fusion_data[0], fusion_data[1], fusion_data[2]
+            else:
+                fusion_type, fusion_location, confidence = str(fusion_data), None, 0.0
             conf_color = "#2e7d32" if confidence >= 0.9 else "#f57c00" if confidence >= 0.8 else "#c62828"
 
             result_html = f"""
@@ -282,7 +301,11 @@ class PredictManager:
         self._ui.update_output_html(mode_html)
 
         if 'fusion' in data:
-            fusion_type, fusion_location, confidence = data['fusion']
+            fusion_data = data['fusion']
+            if isinstance(fusion_data, (tuple, list)) and len(fusion_data) >= 3:
+                fusion_type, fusion_location, confidence = fusion_data[0], fusion_data[1], fusion_data[2]
+            else:
+                fusion_type, fusion_location, confidence = str(fusion_data), None, 0.0
             conf_color = "#2e7d32" if confidence >= 0.9 else "#f57c00" if confidence >= 0.8 else "#c62828"
 
             result_html = f"""

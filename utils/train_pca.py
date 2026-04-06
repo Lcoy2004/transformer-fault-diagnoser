@@ -240,18 +240,24 @@ def train_pca_model(
                         VALUES (?, ?, ?, ?, ?, ?)
                         """
 
-                        inserted_count = 0
+                        all_params = []
                         for j, (pc_values, fault_type, fault_location) in enumerate(zip(X_source, y_source, locations_source)):
                             sample_id = f"{source}_{j+1}"
                             pc_json = json.dumps(pc_values.tolist())
+                            all_params.append([sample_id, model_id, pc_json, fault_type, fault_location, source])
 
-                            params = [sample_id, model_id, pc_json, fault_type, fault_location, source]
-
-                            try:
-                                cursor.execute(insert_query, params)
-                                inserted_count += 1
-                            except Exception as e:
-                                logger.error(f"插入 {source} 第 {j+1} 条数据失败: {e}")
+                        try:
+                            cursor.executemany(insert_query, all_params)
+                            inserted_count = len(all_params)
+                        except Exception as e:
+                            logger.error(f"批量插入 {source} 失败: {e}，尝试逐条插入")
+                            inserted_count = 0
+                            for params in all_params:
+                                try:
+                                    cursor.execute(insert_query, params)
+                                    inserted_count += 1
+                                except Exception as ex:
+                                    logger.error(f"插入 {source} 数据失败: {ex}")
 
                         logger.info(f"成功将 {inserted_count} 条 {source} PCA结果保存到 {table_name}")
                         progress.send(f"{source} 数据已保存: {inserted_count} 条")

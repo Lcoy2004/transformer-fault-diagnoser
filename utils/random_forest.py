@@ -30,23 +30,30 @@ def _validate_table_name(table_name: str) -> bool:
 def _parse_location_coord(location_str):
     """
     解析位置坐标字符串为 x, y, z 数值
-    
+
     Args:
         location_str: 坐标字符串，如 "3.922e-03,2.375e-05,5.000e-06"
-    
+
     Returns:
         tuple: (x, y, z) 或 None
     """
     if location_str is None or str(location_str).strip() == '':
         return None
-    
+
     try:
         parts = str(location_str).split(',')
         if len(parts) >= 3:
-            x = float(parts[0])
-            y = float(parts[1])
-            z = float(parts[2])
-            return (x, y, z)
+            coords = []
+            for i, part in enumerate(parts[:3]):
+                val = float(part.strip())
+                if not np.isfinite(val):
+                    logger.warning(f"坐标第{i+1}个值非有限数: {val}，替换为0.0")
+                    val = 0.0
+                elif abs(val) > 1e6:
+                    logger.warning(f"坐标第{i+1}个值异常大: {val}，截断到±1e6")
+                    val = max(min(val, 1e6), -1e6)
+                coords.append(val)
+            return tuple(coords)
         return None
     except (ValueError, AttributeError):
         return None
@@ -94,19 +101,18 @@ def train_random_forest(
             db_manager = DatabaseManager(db_path=db_path)
 
             with db_manager._connect() as conn:
+                progress.send("\n[1/2] 读取DGA数据...")
                 try:
-                    progress.send("\n[1/2] 读取DGA数据...")
-                    try:
-                        dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
-                        df_dga = pd.read_sql_query(dga_query, conn)
-                        if not df_dga.empty:
-                            progress.send(f"  DGA数据: {len(df_dga)} 条")
-                            logger.info(f"DGA数据: {len(df_dga)} 条")
-                    except Exception as e:
-                        logger.warning(f"读取DGA数据失败: {e}")
-                        df_dga = pd.DataFrame()
+                    dga_query = "SELECT principal_components, fault_type, fault_location FROM fusion_features_dga"
+                    df_dga = pd.read_sql_query(dga_query, conn)
+                    if not df_dga.empty:
+                        progress.send(f"  DGA数据: {len(df_dga)} 条")
+                        logger.info(f"DGA数据: {len(df_dga)} 条")
+                except Exception as e:
+                    logger.warning(f"读取DGA数据失败: {e}")
+                    df_dga = pd.DataFrame()
 
-                    progress.send("\n[2/2] 读取四通道PD数据...")
+                progress.send("\n[2/2] 读取四通道PD数据...")
                 pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
                 
                 pd_data_by_sample = {}
@@ -158,7 +164,7 @@ def train_random_forest(
                         filtered_samples += 1
 
                 if filtered_samples > 0:
-                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个因通道数不足({len(data['pcs'])}/4)被过滤")
+                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个因通道数不足被过滤")
                     progress.send(f"  警告: {filtered_samples}/{total_samples} 样本通道不完整，已过滤")
 
                 progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
@@ -309,7 +315,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
                     max_depth=None,
                     min_samples_split=2,
                     min_samples_leaf=1,
-                    max_features='sqrt'
+                    max_features=1.0
                 )
             )
             rf_location.fit(X_train, coords_train)
