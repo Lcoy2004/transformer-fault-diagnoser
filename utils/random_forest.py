@@ -7,10 +7,10 @@ import json
 import numpy as np
 import pandas as pd
 import joblib
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.multioutput import MultiOutputClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
 
 from config import notify
 from database.db_manager import DatabaseManager
@@ -25,6 +25,31 @@ VALID_PCA_TABLES = set(PCA_TABLE_MAPPING.values())
 def _validate_table_name(table_name: str) -> bool:
     """验证表名是否在白名单中"""
     return table_name in VALID_PCA_TABLES
+
+
+def _parse_location_coord(location_str):
+    """
+    解析位置坐标字符串为 x, y, z 数值
+    
+    Args:
+        location_str: 坐标字符串，如 "3.922e-03,2.375e-05,5.000e-06"
+    
+    Returns:
+        tuple: (x, y, z) 或 None
+    """
+    if location_str is None or str(location_str).strip() == '':
+        return None
+    
+    try:
+        parts = str(location_str).split(',')
+        if len(parts) >= 3:
+            x = float(parts[0])
+            y = float(parts[1])
+            z = float(parts[2])
+            return (x, y, z)
+        return None
+    except (ValueError, AttributeError):
+        return None
 
 
 def train_random_forest(
@@ -171,7 +196,13 @@ def train_random_forest(
         progress.send("模型训练完成汇总")
         progress.send("=" * 40)
         for model_name, result in results.items():
-            progress.send(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
+            is_regression = result.get('is_regression', False)
+            if is_regression:
+                acc_type = result.get('accuracy_type', 0)
+                r2_loc = result.get('r2_location', 0)
+                progress.send(f"  {model_name} 类型准确率: {acc_type:.2%} 位置R²: {r2_loc:.2f}")
+            else:
+                progress.send(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
         
         progress.send("\n注意：DGA和PD是不同的样本集")
         progress.send("预测时使用决策级融合策略")
@@ -192,7 +223,7 @@ def train_random_forest(
 
 def _train_single_model(df, model_name, n_estimators, random_state, progress, log):
     """
-    训练单个模型
+    训练单个模型 - 故障类型分类 + 故障位置回归
     
     Args:
         df: 数据DataFrame
@@ -207,7 +238,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
     """
     X = []
     y = []
-    fault_locations = []
+    fault_coords = []
     
     for _, row in df.iterrows():
         try:
@@ -216,7 +247,9 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
                 pc_data = json.loads(pc_data)
             X.append(pc_data)
             y.append(row['fault_type'])
-            fault_locations.append(row.get('fault_location', None))
+            
+            coord = _parse_location_coord(row.get('fault_location', None))
+            fault_coords.append(coord)
         except Exception as e:
             log.error(f"解析数据失败: {e}")
             continue
@@ -227,65 +260,88 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
     
     X = np.array(X)
     y = np.array(y)
-    fault_locations = np.array(fault_locations)
     
-    has_location_data = any(loc is not None and str(loc).strip() != '' for loc in fault_locations)
+    has_location_data = any(c is not None for c in fault_coords)
     
     models_dir = ensure_models_dir()
     
+    enhanced_n_estimators = max(n_estimators, 200)
+    
     if has_location_data:
-        valid_indices = [i for i, loc in enumerate(fault_locations) if loc is not None and str(loc).strip() != '']
-        X = X[valid_indices]
-        y = y[valid_indices]
-        fault_locations = fault_locations[valid_indices]
+        valid_indices = [i for i, c in enumerate(fault_coords) if c is not None]
+        X_loc = X[valid_indices]
+        y_loc = y[valid_indices]
+        coords_array = np.array([fault_coords[i] for i in valid_indices])
         
-        if len(X) == 0:
+        if len(X_loc) == 0:
             log.warning(f"{model_name} 没有有效的故障位置数据")
             has_location_data = False
         else:
-            y_multi = np.column_stack((y, fault_locations))
-            
-            X_train, X_test, y_train_multi, y_test_multi = train_test_split(
-                X, y_multi, test_size=0.2, random_state=random_state
+            X_train, X_test, y_train, y_test, coords_train, coords_test = train_test_split(
+                X_loc, y_loc, coords_array, test_size=0.2, random_state=random_state
             )
             
-            base_model = RandomForestClassifier(
-                n_estimators=n_estimators,
+            rf_type = RandomForestClassifier(
+                n_estimators=enhanced_n_estimators,
                 random_state=random_state,
-                n_jobs=-1
+                n_jobs=-1,
+                class_weight='balanced',
+                max_depth=20
             )
-            rf_model = MultiOutputClassifier(base_model, n_jobs=-1)
-            rf_model.fit(X_train, y_train_multi)
+            rf_type.fit(X_train, y_train)
+            y_pred_type = rf_type.predict(X_test)
+            accuracy_type = accuracy_score(y_test, y_pred_type)
             
-            y_pred_multi = rf_model.predict(X_test)
-            y_test_type = y_test_multi[:, 0]  # type: ignore
-            y_test_location = y_test_multi[:, 1]  # type: ignore
-            y_pred_type = y_pred_multi[:, 0]  # type: ignore
-            y_pred_location = y_pred_multi[:, 1]  # type: ignore
+            rf_location = MultiOutputRegressor(
+                RandomForestRegressor(
+                    n_estimators=500,
+                    random_state=random_state,
+                    n_jobs=-1,
+                    max_depth=None,
+                    min_samples_split=2,
+                    min_samples_leaf=1,
+                    max_features='sqrt'
+                )
+            )
+            rf_location.fit(X_train, coords_train)
+            coords_pred = rf_location.predict(X_test)
             
-            accuracy_type = accuracy_score(y_test_type, y_pred_type)
-            accuracy_location = accuracy_score(y_test_location, y_pred_location)
-            overall_accuracy = (accuracy_type + accuracy_location) / 2
+            mse = mean_squared_error(coords_test, coords_pred)
+            r2 = r2_score(coords_test, coords_pred)
+            
+            coord_errors = np.sqrt(np.sum((coords_test - coords_pred) ** 2, axis=1))
+            mean_error = np.mean(coord_errors)
+            max_error = np.max(coord_errors)
+            
+            overall_score = (accuracy_type + r2) / 2
             
             log.info(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            log.info(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
-            log.info(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
+            log.info(f"{model_name} 位置回归 R²: {r2:.4f}")
+            log.info(f"{model_name} 位置平均误差: {mean_error:.6f} (最大: {max_error:.6f})")
+            log.info(f"{model_name} 综合评分: {overall_score:.4f}")
             
             progress.send(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            progress.send(f"{model_name} 故障位置准确率: {accuracy_location:.4f}")
-            progress.send(f"{model_name} 综合准确率: {overall_accuracy:.4f}")
+            progress.send(f"{model_name} 位置回归 R²: {r2:.4f}")
+            progress.send(f"{model_name} 位置平均误差: {mean_error:.6f}")
             
-            model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
-            joblib.dump(rf_model, model_path)
-            log.info(f"{model_name} 模型已保存: {model_path}")
+            type_model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
+            location_model_path = f'{models_dir}/random_forest_{model_name.lower()}_location.pkl'
+            joblib.dump(rf_type, type_model_path)
+            joblib.dump(rf_location, location_model_path)
+            log.info(f"{model_name} 类型模型已保存: {type_model_path}")
+            log.info(f"{model_name} 位置回归模型已保存: {location_model_path}")
             
             return {
-                'model': rf_model,
-                'accuracy': overall_accuracy,
+                'model_type': rf_type,
+                'model_location': rf_location,
+                'accuracy': overall_score,
                 'accuracy_type': accuracy_type,
-                'accuracy_location': accuracy_location,
-                'model_path': model_path,
-                'is_multi_output': True
+                'r2_location': r2,
+                'mse_location': mse,
+                'mean_error': mean_error,
+                'model_path': type_model_path,
+                'is_multi_output': True,
+                'is_regression': True
             }
     
     if not has_location_data:
@@ -294,9 +350,11 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         )
         
         rf_model = RandomForestClassifier(
-            n_estimators=n_estimators,
+            n_estimators=enhanced_n_estimators,
             random_state=random_state,
-            n_jobs=-1
+            n_jobs=-1,
+            class_weight='balanced',
+            max_depth=20
         )
         rf_model.fit(X_train, y_train)
         
@@ -306,7 +364,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         log.info(f"{model_name} 故障类型准确率: {accuracy:.4f}")
         progress.send(f"{model_name} 故障类型准确率: {accuracy:.4f}")
         
-        model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
+        model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
         joblib.dump(rf_model, model_path)
         log.info(f"{model_name} 模型已保存: {model_path}")
         
@@ -314,5 +372,6 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             'model': rf_model,
             'accuracy': accuracy,
             'model_path': model_path,
-            'is_multi_output': False
+            'is_multi_output': False,
+            'is_regression': False
         }

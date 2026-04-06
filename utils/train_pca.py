@@ -68,6 +68,9 @@ def train_pca_model(
             
             for table_name, config in TABLE_CONFIGS.items():
                 try:
+                    # 跳过PCA特征表，只读取原始数据表
+                    if config.get('is_pca', False):
+                        continue
                     if not _validate_table_name(table_name):
                         logger.warning(f"无效的表名: {table_name}")
                         continue

@@ -66,9 +66,14 @@ class UIManager:
             self._ui.progressBar.setValue(value)
     
     def update_output(self, text: str) -> None:
-        """更新输出文本"""
+        """更新输出文本（支持HTML格式）"""
         if hasattr(self._ui, 'textEdit_output'):
             self._ui.textEdit_output.append(text)
+    
+    def update_output_html(self, html: str) -> None:
+        """使用HTML格式更新输出"""
+        if hasattr(self._ui, 'textEdit_output'):
+            self._ui.textEdit_output.append(html)
     
     def clear_output(self) -> None:
         """清空输出文本"""
