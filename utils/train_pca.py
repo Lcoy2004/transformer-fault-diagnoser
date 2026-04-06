@@ -98,7 +98,7 @@ def train_pca_model(
                                 progress.send(f"成功读取表 {table_name}，形状: {df_table.shape}")
                     except Exception as e:
                         logger.error(f"读取表 {table_name} 失败: {e}")
-                        progress.send(f"读取表 {table_name} 失败: {e}")
+                        progress.send(f"读取表 {table_name} 失败: {e}（已跳过该表）")
             
             if not table_data:
                 error_msg = "没有找到有效的数据表"
@@ -260,7 +260,7 @@ def train_pca_model(
                                     logger.error(f"插入 {source} 数据失败: {ex}")
 
                         logger.info(f"成功将 {inserted_count} 条 {source} PCA结果保存到 {table_name}")
-                        progress.send(f"{source} 数据已保存: {inserted_count} 条")
+                        progress.send(f"✓ {source} 数据已成功保存 ({inserted_count} 条)")
 
                 logger.info("PCA结果已保存到数据库")
                 progress.send("PCA结果已保存到数据库")

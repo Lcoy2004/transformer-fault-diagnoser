@@ -164,7 +164,7 @@ def train_random_forest(
                         filtered_samples += 1
 
                 if filtered_samples > 0:
-                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个因通道数不足被过滤")
+                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个样本因通道数不足（需4通道）被过滤")
                     progress.send(f"  警告: {filtered_samples}/{total_samples} 样本通道不完整，已过滤")
 
                 progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")

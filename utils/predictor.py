@@ -227,15 +227,15 @@ class Predictor:
         dga_result = None
         pd_result = None
 
-        report_progress("开始故障诊断...", 10)
+        report_progress("开始故障诊断", 10)
 
         if 'DGA' in input_data_dict and ('DGA' in self.models or 'DGA' in self.models_type):
             try:
-                report_progress("正在进行DGA数据分析...", 30)
+                report_progress("正在进行DGA数据分析", 30)
                 dga_type, dga_location = self.predict_dga(input_data_dict['DGA'])
                 dga_result = (dga_type, dga_location)
                 results['DGA'] = dga_result
-                report_progress(f"DGA分析完成: {dga_type}", 50)
+                report_progress(f"DGA分析完成 - {dga_type}", 50)
                 self._logger.info(f"[DGA预测] 故障类型={dga_type}, 故障位置={dga_location}")
             except Exception as e:
                 self._logger.error(f"[DGA预测失败] {e}")
@@ -243,11 +243,11 @@ class Predictor:
         has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
         if has_pd_data and ('PD_FUSION' in self.models or 'PD_FUSION' in self.models_type):
             try:
-                report_progress("正在进行PD局放数据分析...", 60)
+                report_progress("正在进行PD局放数据分析", 60)
                 pd_type, pd_location = self.predict_pd_fusion(input_data_dict)
                 pd_result = (pd_type, pd_location)
                 results['PD_FUSION'] = pd_result
-                report_progress(f"PD分析完成: {pd_type}", 80)
+                report_progress(f"PD分析完成 - {pd_type}", 80)
                 self._logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障位置={pd_location}")
             except Exception as e:
                 self._logger.error(f"[PD融合预测失败] {e}")

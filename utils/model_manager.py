@@ -187,7 +187,9 @@ class ModelManager:
             strategy_html = """
             <div style="background:#fff3e0;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#e65100;">
                 <b>决策级融合策略:</b><br>
-                ① DGA模型预测故障大类 → ② PD融合模型细化放电类型 → ③ 智能决策融合
+                ① DGA模型识别故障大类（正常/过热/放电）<br>
+                ② 若为放电，PD模型细化放电类型<br>
+                ③ 智能决策融合，输出最终诊断结论
             </div>
             """
             self._ui.update_output_html(strategy_html)

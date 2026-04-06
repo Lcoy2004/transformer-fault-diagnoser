@@ -62,8 +62,20 @@ class DataProcessor:
         if table_name is None:
             try:
                 pre_read_df = pd.read_excel(excel_file)
+            except FileNotFoundError:
+                raise ValueError(f"文件不存在: {excel_file}\n\n请检查文件路径是否正确")
+            except PermissionError:
+                raise ValueError(f"文件被占用: {excel_file}\n\n请关闭正在使用该文件的程序后重试")
             except Exception as e:
-                raise ValueError(f"无法读取Excel文件: {e}\n请检查文件路径和格式是否正确")
+                raise ValueError(
+                    f"无法读取Excel文件\n\n"
+                    f"错误详情: {e}\n\n"
+                    f"可能原因:\n"
+                    f"  • 文件路径不正确\n"
+                    f"  • 文件格式不支持（仅支持.xlsx/.xls）\n"
+                    f"  • 文件被其他程序占用\n\n"
+                    f"请检查后重试"
+                )
             table_name = self._importer.detect_data_type(pre_read_df)
             if table_name is None:
                 raise ValueError("无法识别数据类型，请手动指定表名")

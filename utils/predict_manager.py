@@ -197,7 +197,7 @@ class PredictManager:
         # 模式说明
         mode_html = """
         <div style="background:#f3e5f5;padding:4px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#6a1b9a;">
-            [融合预测] DGA + PD数据联合诊断
+            [多源融合诊断] DGA油色谱 + PD局放数据联合分析
         </div>
         """
         self._ui.update_output_html(mode_html)
@@ -254,7 +254,7 @@ class PredictManager:
 
             fusion_html = f"""
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
-                <div style="font-size:11px;color:#666;margin-bottom:4px;">综合诊断结果</div>
+                <div style="font-size:11px;color:#666;margin-bottom:4px;">最终诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
                 <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
@@ -282,7 +282,7 @@ class PredictManager:
 
             result_html = f"""
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
-                <div style="font-size:11px;color:#666;margin-bottom:4px;">诊断结果</div>
+                <div style="font-size:11px;color:#666;margin-bottom:4px;">DGA诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
                 <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
@@ -310,7 +310,7 @@ class PredictManager:
 
             result_html = f"""
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
-                <div style="font-size:11px;color:#666;margin-bottom:4px;">诊断结果</div>
+                <div style="font-size:11px;color:#666;margin-bottom:4px;">PD诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
                 <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
@@ -328,7 +328,7 @@ class PredictManager:
         # 错误信息
         error_html = f"""
         <div style="background:#ffebee;padding:6px 10px;border-radius:4px;margin:4px 0;font-size:11px;">
-            <span style="color:#c62828;">✗ 诊断失败:</span> <span style="color:#b71c1c;">{error_msg}</span>
+            <span style="color:#c62828;">⚠ 诊断中断:</span> <span style="color:#b71c1c;">{error_msg}</span>
         </div>
         """
         self._ui.update_output_html(error_html)
@@ -336,11 +336,11 @@ class PredictManager:
         if "模型未加载" in error_msg or "未找到模型" in error_msg:
             detail = (
                 f"{error_msg}\n\n"
-                f"请按以下步骤操作：\n"
-                f"  1. 先导入训练数据（菜单 → 导入数据）\n"
-                f"  2. 点击「PCA降维」进行特征降维\n"
-                f"  3. 点击「训练模型」训练随机森林\n"
-                f"  4. 完成后即可进行故障诊断"
+                f"请按以下步骤准备模型：\n\n"
+                f"  ① 导入训练数据（菜单 → 导入数据）\n"
+                f"  ② 执行特征降维（点击「PCA降维」）\n"
+                f"  ③ 训练诊断模型（点击「训练模型」）\n"
+                f"  ④ 完成后即可开始故障诊断"
             )
             QMessageBox.warning(self._parent, "模型未就绪", detail)
         else:

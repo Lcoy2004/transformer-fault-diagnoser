@@ -273,7 +273,7 @@ class InputManager:
         lines = []
         for data_type, data in self._cache.items():
             non_zero = sum(1 for v in data if v != 0.0)
-            status = "已填写" if non_zero > 0 else "全为零"
+            status = "已填写" if non_zero > 0 else "未填写"
             lines.append(f"  {data_type}: {status} ({non_zero}/{len(data)} 个非零值)")
         
         return "已输入数据:\n" + "\n".join(lines)
