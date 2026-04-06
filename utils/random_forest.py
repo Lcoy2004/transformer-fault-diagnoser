@@ -276,6 +276,9 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         if len(X_loc) == 0:
             log.warning(f"{model_name} 没有有效的故障位置数据")
             has_location_data = False
+        elif len(X_loc) < 5:
+            log.warning(f"{model_name} 数据量过少({len(X_loc)}个)，无法进行可靠的训练/测试分割")
+            has_location_data = False
         else:
             X_train, X_test, y_train, y_test, coords_train, coords_test = train_test_split(
                 X_loc, y_loc, coords_array, test_size=0.2, random_state=random_state
@@ -345,6 +348,10 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             }
     
     if not has_location_data:
+        if len(X) < 5:
+            log.warning(f"{model_name} 数据量过少({len(X)}个)，无法进行可靠的训练/测试分割")
+            return None
+        
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=random_state
         )

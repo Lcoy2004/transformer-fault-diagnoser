@@ -47,7 +47,7 @@ database/*.db-journal
 models/*.pkl
 models/*.joblib
 logs/*.log
-
+docs/
 # Project specific - Temporary files
 temp/
 tmp/
