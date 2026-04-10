@@ -61,3 +61,46 @@ desktop.ini
 # Excel temporary files
 ~$*.xlsx
 ~$*.xls
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+.coverage
+coverage.xml
+
+# Documentation
+_build/
+docs/_build/
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Local development
+local_settings.py
+
+# PyTest
+pytest.ini
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# flake8
+.flake8
+
+# mypy
+.mypy_cache/
+
+# pyenv
+.python-version
