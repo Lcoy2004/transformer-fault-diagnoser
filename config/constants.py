@@ -2,7 +2,19 @@
 常量配置模块 - 统一管理所有配置常量
 """
 
+import os
 from typing import Dict, List
+
+# 加载 .env 文件中的环境变量（如果存在）
+from pathlib import Path
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key, value)
 
 DGA_FEATURES: List[str] = ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2']
 
@@ -121,16 +133,22 @@ PCA_TABLE_MAPPING: Dict[str, str] = {
     **{f'PD_CH{i}': f'fusion_features_pd_ch{i}' for i in range(1, 5)}
 }
 
-# 关于窗口内容
-ABOUT_CONTENT: str = """
+# 关于窗口内容 - 从环境变量读取敏感信息
+_author_name = os.environ.get('AUTHOR_NAME', '开发者')
+_author_grade = os.environ.get('AUTHOR_GRADE', '')
+_author_university = os.environ.get('AUTHOR_UNIVERSITY', '')
+_author_college = os.environ.get('AUTHOR_COLLEGE', '')
+_project_url = os.environ.get('PROJECT_URL', '')
+
+ABOUT_CONTENT: str = f"""
 ## 本科毕业设计
 ---
 ### 基于多源监测数据的电力变压器故障智能诊断系统
 ---
 
-**UNIVERSITY_NAME COLLEGE_NAME**  
-**学生**：AUTHOR_NAME（GRADE_INFO）  
-**项目地址**：[https://gitee.com/lcoy/transformer-fault-diagnoser](https://gitee.com/lcoy/transformer-fault-diagnoser)
+**{_author_university} {_author_college}**  
+**学生**：{_author_name}{f'（{_author_grade}）' if _author_grade else ''}  
+{f'**项目地址**：[{_project_url}]({_project_url})' if _project_url else ''}
 """
 
 # 操作说明内容（内嵌到程序中，打包后无需外部文件）
