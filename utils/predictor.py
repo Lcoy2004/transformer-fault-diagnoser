@@ -3,8 +3,8 @@
 
 注意：DGA和PD是不同的样本集，使用决策级融合策略：
 1. 如果有DGA数据，先用DGA模型预测大类（正常、过热、放电）
-2. 如果DGA预测为放电且有PD数据，用PD模型细化放电类型
-3. 如果只有PD数据，直接用PD模型预测
+2. 如果DGA预测为放电且有超声波PD数据，用PD模型细化放电类型
+3. 如果只有超声波PD数据，直接用PD模型预测
 """
 
 import logging
@@ -30,7 +30,7 @@ class Predictor:
         self.load_models()
 
     def load_models(self):
-        """加载模型 - 支持分离的类型/位置模型"""
+        """加载模型 - 支持分离的类型/定位模型"""
         models_dir = get_models_dir()
 
         try:
@@ -62,11 +62,11 @@ class Predictor:
                         if os.path.exists(location_model_path):
                             try:
                                 self.models_location[model_name] = joblib.load(location_model_path)
-                                self._logger.info(f"[加载] {model_name} 位置模型成功")
+                                self._logger.info(f"[加载] {model_name} 定位模型成功")
                             except Exception as e:
-                                self._logger.error(f"[错误] 加载 {model_name} 位置模型失败: {e}")
+                                self._logger.error(f"[错误] 加载 {model_name} 定位模型失败: {e}")
                         else:
-                            self._logger.warning(f"[警告] {model_name} 位置模型不存在")
+                            self._logger.warning(f"[警告] {model_name} 定位模型不存在")
                     except Exception as e:
                         self._logger.error(f"[错误] 加载 {model_name} 类型模型失败: {e}")
                         if model_name in self.models_type:
@@ -94,7 +94,7 @@ class Predictor:
             input_data: DGA输入数据 [h2, ch4, c2h6, c2h4, c2h2]
 
         Returns:
-            tuple: (故障类型, 故障位置)
+            tuple: (故障类型, 故障定位)
         """
         return self._predict_single(input_data, 'DGA')
 
@@ -103,11 +103,11 @@ class Predictor:
         使用PD融合模型预测
 
         Args:
-            input_data_dict: 四通道PD数据字典
+            input_data_dict: 四通道超声波PD数据字典
                 {'PD_CH1': [...], 'PD_CH2': [...], 'PD_CH3': [...], 'PD_CH4': [...]}
 
         Returns:
-            tuple: (故障类型, 故障位置)
+            tuple: (故障类型, 故障定位)
         """
         fused_data = []
 
@@ -139,7 +139,7 @@ class Predictor:
                 self._logger.warning(f"[警告] {ch} 数据缺失，使用零填充")
 
         if not any(np.any(d != 0) for d in fused_data):
-            raise ValueError("[错误] 没有有效的PD数据")
+            raise ValueError("[错误] 没有有效的超声波PD数据")
 
         fused_features = np.concatenate(fused_data)
 
@@ -154,7 +154,7 @@ class Predictor:
             model_name: 模型名称
 
         Returns:
-            tuple: (故障类型, 故障位置坐标)
+            tuple: (故障类型, 故障定位坐标)
         """
         X = np.array([features])
 
@@ -199,8 +199,8 @@ class Predictor:
 
         融合策略：
         1. 如果有DGA数据，先用DGA模型预测大类（正常、过热、放电）
-        2. 如果DGA预测为放电且有PD数据，用PD模型细化放电类型
-        3. 如果只有PD数据，直接用PD模型预测
+        2. 如果DGA预测为放电且有超声波PD数据，用PD模型细化放电类型
+        3. 如果只有超声波PD数据，直接用PD模型预测
 
         Args:
             input_data_dict: 输入数据字典
@@ -236,19 +236,19 @@ class Predictor:
                 dga_result = (dga_type, dga_location)
                 results['DGA'] = dga_result
                 report_progress(f"DGA分析完成 - {dga_type}", 50)
-                self._logger.info(f"[DGA预测] 故障类型={dga_type}, 故障位置={dga_location}")
+                self._logger.info(f"[DGA预测] 故障类型={dga_type}, 故障定位={dga_location}")
             except Exception as e:
                 self._logger.error(f"[DGA预测失败] {e}")
 
         has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
         if has_pd_data and ('PD_FUSION' in self.models or 'PD_FUSION' in self.models_type):
             try:
-                report_progress("正在进行PD局放数据分析", 60)
+                report_progress("正在进行超声波PD局放数据分析", 60)
                 pd_type, pd_location = self.predict_pd_fusion(input_data_dict)
                 pd_result = (pd_type, pd_location)
                 results['PD_FUSION'] = pd_result
-                report_progress(f"PD分析完成 - {pd_type}", 80)
-                self._logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障位置={pd_location}")
+                report_progress(f"超声波PD分析完成 - {pd_type}", 80)
+                self._logger.info(f"[PD融合预测] 故障类型={pd_type}, 故障定位={pd_location}")
             except Exception as e:
                 self._logger.error(f"[PD融合预测失败] {e}")
 
@@ -262,9 +262,9 @@ class Predictor:
 
             if dga_type == '放电':
                 fusion_type = pd_type
-                fusion_location = dga_location
+                fusion_location = pd_location
                 confidence = 0.9
-                self._logger.info("[决策融合] DGA预测为放电，使用PD细化放电类型")
+                self._logger.info("[决策融合] DGA预测为放电，使用超声波PD细化放电类型及定位")
             else:
                 fusion_type = dga_type
                 fusion_location = dga_location
@@ -279,7 +279,7 @@ class Predictor:
         elif pd_result:
             fusion_type, fusion_location = pd_result
             confidence = 0.85
-            self._logger.info("[决策融合] 只有PD数据，使用PD融合预测结果")
+            self._logger.info("[决策融合] 只有超声波PD数据，使用PD融合预测结果")
 
         else:
             missing_models = []
@@ -287,7 +287,7 @@ class Predictor:
                 missing_models.append("DGA模型")
             has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
             if has_pd_data and 'PD_FUSION' not in self.models and 'PD_FUSION' not in self.models_type:
-                missing_models.append("PD融合模型")
+                missing_models.append("超声波PD融合模型")
 
             if missing_models:
                 raise ValueError(f"[错误] 以下模型未加载，请先训练: {', '.join(missing_models)}")
@@ -308,7 +308,7 @@ class Predictor:
             data_type: 数据类型
 
         Returns:
-            tuple: (故障类型, 故障位置)
+            tuple: (故障类型, 故障定位)
         """
         try:
             if data_type not in self.scalers:
@@ -385,7 +385,7 @@ class Predictor:
             data_type: 数据类型 ('DGA', 'PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4')
 
         Returns:
-            tuple: (故障类型, 故障位置)
+            tuple: (故障类型, 故障定位)
         """
         return self._predict_single(input_data, data_type)
 

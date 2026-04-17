@@ -157,7 +157,7 @@ class DataProcessor:
             data_type: 数据类型 (DGA/PD_CH1/PD_CH2/PD_CH3/PD_CH4)
 
         Returns:
-            (故障类型, 故障位置)
+            (故障类型, 故障定位)
         """
         self._ensure_predictor()
         assert self._predictor is not None

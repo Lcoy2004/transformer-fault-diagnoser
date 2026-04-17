@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 FEATURE_NAME_MAP: Dict[str, str] = {
     'h2': '氢气(H₂)', 'ch4': '甲烷(CH₄)', 'c2h6': '乙烷(C₂H₆)',
     'c2h4': '乙烯(C₂H₄)', 'c2h2': '乙炔(C₂H₂)',
-    'band1_energy': '频段1能量', 'band2_energy': '频段2能量',
-    'band3_energy': '频段3能量', 'band4_energy': '频段4能量',
+    'band1_energy': '频带1能量(归一化)', 'band2_energy': '频带2能量(归一化)',
+    'band3_energy': '频带3能量(归一化)', 'band4_energy': '频带4能量(归一化)',
     'kurtosis': '峭度', 'main_amp': '主频幅值', 'main_freq': '主频率',
     'mean': '均值', 'peak': '峰值', 'pulse_width': '脉冲宽度',
     'skewness': '偏度', 'var': '方差'
@@ -43,7 +43,7 @@ FEATURE_NAME_MAP: Dict[str, str] = {
 
 FEATURE_UNIT_MAP: Dict[str, str] = {
     'h2': 'μL/L', 'ch4': 'μL/L', 'c2h6': 'μL/L', 'c2h4': 'μL/L', 'c2h2': 'μL/L',
-    'band1_energy': 'pJ', 'band2_energy': 'pJ', 'band3_energy': 'pJ', 'band4_energy': 'pJ',
+    'band1_energy': '', 'band2_energy': '', 'band3_energy': '', 'band4_energy': '',
     'kurtosis': '', 'main_amp': 'mV', 'main_freq': 'kHz', 'mean': 'mV',
     'peak': 'mV', 'pulse_width': 'μs', 'skewness': '', 'var': 'mV²'
 }

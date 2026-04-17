@@ -160,10 +160,10 @@ class ModelManager:
                     if is_regression:
                         r2_loc = model_result.get('r2_location', 0)
                         mean_err = model_result.get('mean_error', 0)
-                        details.append(f"类型:{acc_type:.1%} 位置R²:{r2_loc:.2f} 误差:{mean_err:.4f}")
+                        details.append(f"类型:{acc_type:.1%} 定位R²:{r2_loc:.2f} 误差:{mean_err:.4f}")
                     else:
                         acc_loc = model_result.get('accuracy_location', 0)
-                        details.append(f"类型:{acc_type:.1%} 位置:{acc_loc:.1%}")
+                        details.append(f"类型:{acc_type:.1%} 定位:{acc_loc:.1%}")
 
                 model_path = model_result.get('model_path', 'N/A')
                 if model_path != 'N/A':
@@ -188,7 +188,7 @@ class ModelManager:
             <div style="background:#fff3e0;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#e65100;">
                 <b>决策级融合策略:</b><br>
                 ① DGA模型识别故障大类（正常/过热/放电）<br>
-                ② 若为放电，PD模型细化放电类型<br>
+                ② 若为放电，超声波PD模型细化放电类型<br>
                 ③ 智能决策融合，输出最终诊断结论
             </div>
             """

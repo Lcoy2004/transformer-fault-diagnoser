@@ -231,10 +231,10 @@ class InputManager:
     
     def has_valid_pd_data(self) -> bool:
         """
-        检查是否有有效的PD数据（非全零）
+        检查是否有有效的超声波PD数据（非全零）
 
         Returns:
-            是否有有效PD数据
+            是否有有效超声波PD数据
         """
         for pd_type in self._cache:
             if pd_type.startswith('PD_CH'):

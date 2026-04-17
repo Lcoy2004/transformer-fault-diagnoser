@@ -29,10 +29,15 @@ def _validate_table_name(table_name: str) -> bool:
 
 def _parse_location_coord(location_str):
     """
-    解析位置坐标字符串为 x, y, z 数值
+    解析位置字符串为 x, y, z 数值
+
+    注意：超声波PD数据的fault_location可能是：
+    - 三维空间坐标（当提供了传感器坐标和波速时），如 "0.123,0.456,0.789"
+    - 通道间时间差（默认情况），如 "3.922e-03,2.375e-05,5.000e-06"
+    两种格式均为逗号分隔的三元组，解析方式相同
 
     Args:
-        location_str: 坐标字符串，如 "3.922e-03,2.375e-05,5.000e-06"
+        location_str: 位置字符串，如 "3.922e-03,2.375e-05,5.000e-06"
 
     Returns:
         tuple: (x, y, z) 或 None
@@ -73,7 +78,7 @@ def train_random_forest(
     
     训练两个模型：
     1. DGA模型：仅使用DGA数据
-    2. PD融合模型：将四通道PD数据融合后训练
+    2. PD融合模型：将四通道超声波PD数据融合后训练
     
     注意：DGA和PD是不同的样本集，预测时使用决策级融合策略
     
@@ -112,7 +117,7 @@ def train_random_forest(
                     logger.warning(f"读取DGA数据失败: {e}")
                     df_dga = pd.DataFrame()
 
-                progress.send("\n[2/2] 读取四通道PD数据...")
+                progress.send("\n[2/2] 读取四通道超声波PD数据...")
                 pd_channels = [PCA_TABLE_MAPPING[f'PD_CH{i}'] for i in range(1, 5)]
                 
                 pd_data_by_sample = {}
@@ -164,11 +169,11 @@ def train_random_forest(
                         filtered_samples += 1
 
                 if filtered_samples > 0:
-                    logger.warning(f"PD数据融合: {total_samples} 个样本中，{filtered_samples} 个样本因通道数不足（需4通道）被过滤")
+                    logger.warning(f"超声波PD数据融合: {total_samples} 个样本中，{filtered_samples} 个样本因通道数不足（需4通道）被过滤")
                     progress.send(f"  警告: {filtered_samples}/{total_samples} 样本通道不完整，已过滤")
 
-                progress.send(f"  PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
-                logger.info(f"PD融合数据: {len(pd_fused_data)} 条")
+                progress.send(f"  超声波PD融合数据: {len(pd_fused_data)} 条 (四通道融合)")
+                logger.info(f"超声波PD融合数据: {len(pd_fused_data)} 条")
 
         else:
             df = pd.read_excel(data_file)
@@ -194,7 +199,7 @@ def train_random_forest(
         
         if pd_fused_data:
             progress.send("\n" + "=" * 40)
-            progress.send("训练PD融合模型 (四通道融合)")
+            progress.send("训练超声波PD融合模型 (四通道融合)")
             progress.send("=" * 40)
             df_pd = pd.DataFrame(pd_fused_data)
             pd_result = _train_single_model(
@@ -212,7 +217,7 @@ def train_random_forest(
             if is_regression:
                 acc_type = result.get('accuracy_type', 0)
                 r2_loc = result.get('r2_location', 0)
-                progress.send(f"  {model_name} 类型准确率: {acc_type:.2%} 位置R²: {r2_loc:.2f}")
+                progress.send(f"  {model_name} 类型准确率: {acc_type:.2%} 定位R²: {r2_loc:.2f}")
             else:
                 progress.send(f"  {model_name} 模型准确率: {result['accuracy']:.4f}")
         
@@ -235,7 +240,7 @@ def train_random_forest(
 
 def _train_single_model(df, model_name, n_estimators, random_state, progress, log):
     """
-    训练单个模型 - 故障类型分类 + 故障位置回归
+    训练单个模型 - 故障类型分类 + 故障定位回归
     
     Args:
         df: 数据DataFrame
@@ -286,7 +291,7 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
         coords_array = np.array([fault_coords[i] for i in valid_indices])
         
         if len(X_loc) == 0:
-            log.warning(f"{model_name} 没有有效的故障位置数据")
+            log.warning(f"{model_name} 没有有效的故障定位数据")
             has_location_data = False
         elif len(X_loc) < 5:
             log.warning(f"{model_name} 数据量过少({len(X_loc)}个)，无法进行可靠的训练/测试分割")
@@ -331,20 +336,20 @@ def _train_single_model(df, model_name, n_estimators, random_state, progress, lo
             overall_score = (accuracy_type + r2) / 2
             
             log.info(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            log.info(f"{model_name} 位置回归 R²: {r2:.4f}")
-            log.info(f"{model_name} 位置平均误差: {mean_error:.6f} (最大: {max_error:.6f})")
+            log.info(f"{model_name} 定位回归 R²: {r2:.4f}")
+            log.info(f"{model_name} 定位平均误差: {mean_error:.6f} (最大: {max_error:.6f})")
             log.info(f"{model_name} 综合评分: {overall_score:.4f}")
             
             progress.send(f"{model_name} 故障类型准确率: {accuracy_type:.4f}")
-            progress.send(f"{model_name} 位置回归 R²: {r2:.4f}")
-            progress.send(f"{model_name} 位置平均误差: {mean_error:.6f}")
+            progress.send(f"{model_name} 定位回归 R²: {r2:.4f}")
+            progress.send(f"{model_name} 定位平均误差: {mean_error:.6f}")
             
             type_model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
             location_model_path = f'{models_dir}/random_forest_{model_name.lower()}_location.pkl'
             joblib.dump(rf_type, type_model_path)
             joblib.dump(rf_location, location_model_path)
             log.info(f"{model_name} 类型模型已保存: {type_model_path}")
-            log.info(f"{model_name} 位置回归模型已保存: {location_model_path}")
+            log.info(f"{model_name} 定位回归模型已保存: {location_model_path}")
             
             return {
                 'model_type': rf_type,

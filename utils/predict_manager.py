@@ -197,7 +197,7 @@ class PredictManager:
         # 模式说明
         mode_html = """
         <div style="background:#f3e5f5;padding:4px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#6a1b9a;">
-            [多源融合诊断] DGA油色谱 + PD局放数据联合分析
+            [多源融合诊断] DGA油色谱 + 超声波PD局放数据联合分析
         </div>
         """
         self._ui.update_output_html(mode_html)
@@ -208,7 +208,7 @@ class PredictManager:
             <tr style="background:#f5f5f5;">
                 <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">分析类型</th>
                 <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">故障类型</th>
-                <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">故障位置</th>
+                <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">故障定位</th>
             </tr>
         """
 
@@ -256,7 +256,7 @@ class PredictManager:
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
                 <div style="font-size:11px;color:#666;margin-bottom:4px;">最终诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
-                <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
+                <div style="font-size:11px;color:#555;">定位: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
             </div>
             <hr style="border:none;border-top:1px solid #e0e0e0;margin:8px 0;">
@@ -284,7 +284,7 @@ class PredictManager:
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
                 <div style="font-size:11px;color:#666;margin-bottom:4px;">DGA诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
-                <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
+                <div style="font-size:11px;color:#555;">定位: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
             </div>
             <hr style="border:none;border-top:1px solid #e0e0e0;margin:8px 0;">
@@ -295,7 +295,7 @@ class PredictManager:
         """显示PD预测结果 - HTML格式化"""
         mode_html = """
         <div style="background:#fce4ec;padding:4px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#c2185b;">
-            [PD单源诊断] 仅使用局部放电数据
+            [PD单源诊断] 仅使用局部放电超声波数据
         </div>
         """
         self._ui.update_output_html(mode_html)
@@ -312,7 +312,7 @@ class PredictManager:
             <div style="background:#fff8e1;padding:8px 10px;border-radius:4px;margin:8px 0;border-left:3px solid #ffc107;">
                 <div style="font-size:11px;color:#666;margin-bottom:4px;">PD诊断结论</div>
                 <div style="font-size:13px;color:#e65100;margin-bottom:2px;"><b>{fusion_type}</b></div>
-                <div style="font-size:11px;color:#555;">位置: {fusion_location or '未知'}</div>
+                <div style="font-size:11px;color:#555;">定位: {fusion_location or '未知'}</div>
                 <div style="font-size:10px;color:{conf_color};margin-top:4px;">置信度: <b>{confidence:.0%}</b></div>
             </div>
             <hr style="border:none;border-top:1px solid #e0e0e0;margin:8px 0;">

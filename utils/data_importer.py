@@ -51,7 +51,7 @@ class DataImporter:
         pd_channel_count = sum(1 for col in columns if any(channel in col for channel in pd_channel_columns))
         
         if pd_channel_count >= 12:
-            logger.info(f"检测到局部放电数据，包含 {pd_channel_count} 个通道相关列")
+            logger.info(f"检测到局部放电超声波数据，包含 {pd_channel_count} 个通道相关列")
             return 'pd_channel_1'
         
         match_results = []
@@ -108,7 +108,7 @@ class DataImporter:
                     found_columns.append(req_col)
                     found = True
                     break
-                if req_col == 'fault_location' and any(keyword in col for keyword in ['位置', '部位']):
+                if req_col == 'fault_location' and any(keyword in col for keyword in ['定位', '位置', '部位']):
                     found_columns.append(req_col)
                     found = True
                     break
@@ -169,7 +169,7 @@ class DataImporter:
                         logger.warning(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
                         notify_progress(f"表 {channel_table} 缺少必要的列: {', '.join(missing_columns)}")
                 
-                notify_progress(f"局部放电数据导入完成，共导入 {total_imported} 条记录", 100)
+                notify_progress(f"局部放电超声波数据导入完成，共导入 {total_imported} 条记录", 100)
                 return total_imported
             
             is_valid, missing_columns, found_columns = self.validate_columns(df, table_name)

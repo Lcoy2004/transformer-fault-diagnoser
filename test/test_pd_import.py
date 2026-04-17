@@ -1,5 +1,5 @@
 """
-测试局部放电数据导入和处理
+测试局部放电超声波数据导入和处理
 """
 
 import sys
@@ -17,21 +17,21 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 def test_pd_import():
-    """测试局部放电数据导入"""
+    """测试局部放电超声波数据导入"""
     try:
         # 初始化数据处理器
         processor = DataProcessor()
         logger.info("数据处理器初始化成功")
         
-        # 测试导入局部放电数据
+        # 测试导入局部放电超声波数据
         pd_data_file = 'data/pd_features_with_location.xlsx'
         
         if os.path.exists(pd_data_file):
-            logger.info(f"开始导入局部放电数据: {pd_data_file}")
+            logger.info(f"开始导入局部放电超声波数据: {pd_data_file}")
             
             # 导入数据（自动检测数据类型）
             imported_count = processor.import_data(pd_data_file)
-            logger.info(f"成功导入 {imported_count} 条局部放电数据")
+            logger.info(f"成功导入 {imported_count} 条局部放电超声波数据")
             
             # 查看所有表
             tables = processor.get_all_tables()
@@ -45,7 +45,7 @@ def test_pd_import():
                     if data:
                         logger.info(f"前3条数据: {data[:3]}")
         else:
-            logger.warning(f"局部放电数据文件不存在: {pd_data_file}")
+            logger.warning(f"局部放电超声波数据文件不存在: {pd_data_file}")
             
     except Exception as e:
         logger.error(f"测试失败: {e}")
@@ -85,14 +85,14 @@ def test_rf_training():
         logger.info(f"随机森林训练完成，准确率: {rf_result.get('accuracy', 0):.4f}")
         if 'accuracy_type' in rf_result:
             logger.info(f"故障类型准确率: {rf_result['accuracy_type']:.4f}")
-            logger.info(f"故障位置准确率: {rf_result['accuracy_location']:.4f}")
+            logger.info(f"故障定位准确率: {rf_result['accuracy_location']:.4f}")
         
     except Exception as e:
         logger.error(f"随机森林训练失败: {e}")
         raise
 
 if __name__ == "__main__":
-    logger.info("开始测试局部放电数据处理")
+    logger.info("开始测试局部放电超声波数据处理")
     
     # 测试数据导入
     test_pd_import()
@@ -103,4 +103,4 @@ if __name__ == "__main__":
     # 测试随机森林训练
     test_rf_training()
     
-    logger.info("局部放电数据处理测试完成")
+    logger.info("局部放电超声波数据处理测试完成")
