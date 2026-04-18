@@ -22,7 +22,6 @@ class Predictor:
     def __init__(self):
         """初始化预测器"""
         self._logger = logging.getLogger(__name__)
-        self.models = {}
         self.models_type = {}
         self.models_location = {}
         self.scalers = {}
@@ -71,16 +70,8 @@ class Predictor:
                         self._logger.error(f"[错误] 加载 {model_name} 类型模型失败: {e}")
                         if model_name in self.models_type:
                             del self.models_type[model_name]
-                else:
-                    old_model_path = f'{models_dir}/random_forest_{model_name.lower()}_model.pkl'
-                    if os.path.exists(old_model_path):
-                        try:
-                            self.models[model_name] = joblib.load(old_model_path)
-                            self._logger.info(f"[加载] {model_name} 旧版模型成功（建议重新训练）")
-                        except Exception as e:
-                            self._logger.error(f"[错误] 加载 {model_name} 旧版模型失败: {e}")
 
-            if not self.models and not self.models_type:
+            if not self.models_type:
                 self._logger.warning("[警告] 没有找到可用的随机森林模型")
 
         except Exception as e:
@@ -181,15 +172,6 @@ class Predictor:
 
             return fault_type, fault_location
 
-        elif model_name in self.models:
-            model = self.models[model_name]
-            y_pred = model.predict(X)
-
-            if hasattr(model, 'estimators_'):
-                y_pred = np.array(y_pred)
-                return y_pred[0, 0], y_pred[0, 1]
-            else:
-                return y_pred[0], None
         else:
             raise ValueError(f"[错误] {model_name} 模型未加载")
 
@@ -229,7 +211,7 @@ class Predictor:
 
         report_progress("开始故障诊断", 10)
 
-        if 'DGA' in input_data_dict and ('DGA' in self.models or 'DGA' in self.models_type):
+        if 'DGA' in input_data_dict and 'DGA' in self.models_type:
             try:
                 report_progress("正在进行DGA数据分析", 30)
                 dga_type, dga_location = self.predict_dga(input_data_dict['DGA'])
@@ -241,7 +223,7 @@ class Predictor:
                 self._logger.error(f"[DGA预测失败] {e}")
 
         has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
-        if has_pd_data and ('PD_FUSION' in self.models or 'PD_FUSION' in self.models_type):
+        if has_pd_data and 'PD_FUSION' in self.models_type:
             try:
                 report_progress("正在进行超声波PD局放数据分析", 60)
                 pd_type, pd_location = self.predict_pd_fusion(input_data_dict)
@@ -283,10 +265,10 @@ class Predictor:
 
         else:
             missing_models = []
-            if 'DGA' in input_data_dict and 'DGA' not in self.models and 'DGA' not in self.models_type:
+            if 'DGA' in input_data_dict and 'DGA' not in self.models_type:
                 missing_models.append("DGA模型")
             has_pd_data = any(ch in input_data_dict for ch in PD_CHANNELS)
-            if has_pd_data and 'PD_FUSION' not in self.models and 'PD_FUSION' not in self.models_type:
+            if has_pd_data and 'PD_FUSION' not in self.models_type:
                 missing_models.append("超声波PD融合模型")
 
             if missing_models:
@@ -299,13 +281,13 @@ class Predictor:
 
         return results
 
-    def _predict_single(self, input_data, data_type):
+    def predict(self, input_data, data_type='DGA'):
         """
-        单一数据源预测
+        预测故障（单类型数据）
 
         Args:
-            input_data: 输入数据
-            data_type: 数据类型
+            input_data: 输入数据列表
+            data_type: 数据类型 ('DGA', 'PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4')
 
         Returns:
             tuple: (故障类型, 故障定位)
@@ -337,57 +319,31 @@ class Predictor:
 
             model_name = 'DGA' if data_type == 'DGA' else 'PD_FUSION'
 
-            if model_name in self.models_type:
-                fault_type = self.models_type[model_name].predict(X_pca)[0]
-
-                if model_name in self.models_location:
-                    location_model = self.models_location[model_name]
-                    coords_pred = location_model.predict(X_pca)[0]
-                    
-                    if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
-                        coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
-                        x, y, z = coords_pred
-                        fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
-                    elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
-                        coords_array = np.array(coords_pred[:3], dtype=float)
-                        coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
-                        x, y, z = coords_array
-                        fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
-                    else:
-                        fault_location = None
-                else:
-                    fault_location = None
-
-                return fault_type, fault_location
-
-            elif data_type in self.models:
-                model = self.models[data_type]
-                y_pred = model.predict(X_pca)
-
-                if hasattr(model, 'estimators_'):
-                    y_pred = np.array(y_pred)
-                    return y_pred[0, 0], y_pred[0, 1]
-                else:
-                    return y_pred[0], None
-            else:
+            if model_name not in self.models_type:
                 raise ValueError(f"[错误] {model_name} 模型未加载")
+
+            fault_type = self.models_type[model_name].predict(X_pca)[0]
+            fault_location = None
+
+            if model_name in self.models_location:
+                location_model = self.models_location[model_name]
+                coords_pred = location_model.predict(X_pca)[0]
+                
+                if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
+                    coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
+                    x, y, z = coords_pred
+                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
+                elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
+                    coords_array = np.array(coords_pred[:3], dtype=float)
+                    coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
+                    x, y, z = coords_array
+                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
+
+            return fault_type, fault_location
 
         except Exception as e:
             self._logger.error(f"[预测失败] {e}")
             raise
-
-    def predict(self, input_data, data_type='DGA'):
-        """
-        预测故障（单类型数据）
-
-        Args:
-            input_data: 输入数据列表
-            data_type: 数据类型 ('DGA', 'PD_CH1', 'PD_CH2', 'PD_CH3', 'PD_CH4')
-
-        Returns:
-            tuple: (故障类型, 故障定位)
-        """
-        return self._predict_single(input_data, data_type)
 
     def get_supported_types(self):
         """
@@ -408,4 +364,4 @@ class Predictor:
         Returns:
             bool: 是否有该模型
         """
-        return model_name in self.models or model_name in self.models_type
+        return model_name in self.models_type
