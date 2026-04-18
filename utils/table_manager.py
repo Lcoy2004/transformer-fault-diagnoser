@@ -35,11 +35,14 @@ class TableManager:
         """
         try:
             self._selector.clear()
-            self._selector.addItem("查询数据")
             
             tables = self._data.get_all_tables()
-            for name in tables:
-                self._selector.addItem(name)
+            if tables:
+                for name in tables:
+                    self._selector.addItem(name)
+            else:
+                self._selector.addItem("暂无数据表")
+                self._selector.model().item(0).setEnabled(False)
             
             logger.info("表列表刷新成功")
             return True
@@ -99,12 +102,11 @@ class TableManager:
         Returns:
             (是否成功, 消息)
         """
-        if index == 0:
-            self._table.setRowCount(0)
+        if index < 0:
             return True, ""
         
         table_name = self._selector.currentText()
-        if not table_name or table_name == "查询数据":
+        if not table_name:
             return True, ""
         
         return self.load(table_name)
@@ -112,4 +114,4 @@ class TableManager:
     def get_current_table(self) -> Optional[str]:
         """获取当前选中的表名"""
         name = self._selector.currentText()
-        return name if name and name != "查询数据" else None
+        return name if name else None

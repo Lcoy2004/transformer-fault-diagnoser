@@ -87,7 +87,7 @@ class Predictor:
         Returns:
             tuple: (故障类型, 故障定位)
         """
-        return self._predict_single(input_data, 'DGA')
+        return self.predict(input_data, 'DGA')
 
     def predict_pd_fusion(self, input_data_dict):
         """
