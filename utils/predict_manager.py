@@ -65,9 +65,9 @@ class PredictManager:
             return
 
         mode_desc = {
-            ('fusion'): "融合诊断模式 (DGA + PD)",
-            ('dga_only'): "DGA 单源诊断模式",
-            ('pd_only'): "PD 单源诊断模式"
+            'fusion': "融合诊断模式 (DGA + PD)",
+            'dga_only': "DGA 单源诊断模式",
+            'pd_only': "PD 单源诊断模式"
         }
         mode_key = 'fusion' if (has_dga and has_valid_pd) else ('dga_only' if has_dga else 'pd_only')
 
@@ -95,7 +95,7 @@ class PredictManager:
         self._ui.update_output_html(mode_html)
         self._ui.update_progress(0)
 
-        worker = self._thread.start(self._do_predict, all_data)
+        worker = self._thread.start(self._do_predict, all_data, has_valid_pd)
         worker.progress.connect(self._ui.update_output)
         worker.progress_value.connect(self._ui.update_progress)
         worker.finished.connect(self._on_predict_done)
@@ -105,6 +105,7 @@ class PredictManager:
     def _do_predict(
         self,
         all_data: Dict[str, List[float]],
+        has_valid_pd: bool,
         progress_callback=None,
         progress_value_callback=None
     ) -> Dict[str, Any]:
@@ -113,6 +114,7 @@ class PredictManager:
 
         Args:
             all_data: 所有输入数据
+            has_valid_pd: 是否有有效的PD数据（从UI线程传入，避免线程安全问题）
             progress_callback: 进度回调
             progress_value_callback: 进度值回调
 
@@ -120,7 +122,6 @@ class PredictManager:
             预测结果字典
         """
         has_dga = 'DGA' in all_data
-        has_valid_pd = self._input.has_valid_pd_data()
 
         result = {'mode': '', 'data': None, 'error': None}
 

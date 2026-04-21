@@ -146,10 +146,11 @@ class ChartViewHover(QChartView):
                 if key in title.lower().replace(' ', '').replace('_', ''):
                     unit = val
                     break
+            value_text = self._format_value(value) if value is not None else "N/A"
             if unit:
-                text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value:.4f}</b> {unit}<br/>类型: {series_name}"
+                text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value_text}</b> {unit}<br/>类型: {series_name}"
             else:
-                text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value:.4f}</b><br/>类型: {series_name}"
+                text = f"<b>样本 #{idx}</b><br/>{title}: <b>{value_text}</b><br/>类型: {series_name}"
             global_pos = event.globalPosition()
             self._ensure_hover_label().show_at(text, global_pos)
             self.viewport().setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -162,6 +163,18 @@ class ChartViewHover(QChartView):
         super().leaveEvent(event)
         if self._hover_label:
             self._hover_label.hide_me()
+
+    @staticmethod
+    def _format_value(value: float) -> str:
+        abs_val = abs(value)
+        if abs_val == 0:
+            return "0.0"
+        elif abs_val >= 1000 or abs_val < 0.01:
+            return f"{value:.2e}"
+        elif abs_val >= 1:
+            return f"{value:.2f}"
+        else:
+            return f"{value:.4f}"
 
 
 class ChartManager:
@@ -410,6 +423,16 @@ class ChartContainer(QWidget):
             if config['features']:
                 self._on_feature_changed(0)
 
+    def _refresh_features_dynamic(self, table_name: str, feature_names: List[str]):
+        self.feature_selector.clear()
+        for col_name in feature_names:
+            display = self.chart_manager.get_feature_display_name(col_name)
+            unit = self.chart_manager.get_feature_unit(col_name)
+            text = f"{display} ({unit})" if unit else display
+            self.feature_selector.addItem(text, col_name)
+        if feature_names:
+            self._on_feature_changed(0)
+
     def _update_stats(self, fault_stats: Dict):
         self.stats_table.setRowCount(len(fault_stats))
         for i, (ft, stats) in enumerate(fault_stats.items()):
@@ -431,12 +454,16 @@ class ChartContainer(QWidget):
         try:
             X, y, feature_names, fault_stats = self.chart_manager.load_table_data(table_name)
             config = TABLE_CONFIGS[table_name]
+            is_pca = config.get('is_pca', False)
             self.info_label.setText(
                 f"表: {config['name']} | 样本数: {len(X)} | "
                 f"特征数: {len(feature_names)} | 故障类型: {len(fault_stats)}种"
             )
             self._update_stats(fault_stats)
-            self._refresh_features(table_name)
+            if is_pca:
+                self._refresh_features_dynamic(table_name, feature_names)
+            else:
+                self._refresh_features(table_name)
         except Exception as e:
             logger.error(f"[图表加载失败] {e}")
             self.info_label.setText(f"加载失败: {e}")
@@ -491,7 +518,6 @@ class ChartContainer(QWidget):
         axis_x.setLabelFormat("%d")
         axis_y = QValueAxis()
         axis_y.setTitleText(y_axis_title)
-        axis_y.setLabelFormat("%.3f")
         chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
         chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
         return axis_x, axis_y
@@ -533,7 +559,7 @@ class ChartContainer(QWidget):
             ft_data = feature_data[indices]
             self._add_series_to_chart(chart, series, indices, ft_data, color, ft, axis_x, axis_y)
             self._add_legend_item(ft, color)
-        self._set_axis_ranges(chart, feature_data)
+        self._set_axis_ranges(chart, axis_x, axis_y, feature_data)
         self.chart_area.setChart(chart)
 
     def _display_scatter_chart(self, feature_data: np.ndarray, y: np.ndarray,
@@ -549,7 +575,7 @@ class ChartContainer(QWidget):
             ft_data = feature_data[indices]
             self._add_series_to_chart(chart, series, indices, ft_data, color, ft, axis_x, axis_y)
             self._add_legend_item(ft, color)
-        self._set_axis_ranges(chart, feature_data)
+        self._set_axis_ranges(chart, axis_x, axis_y, feature_data)
         self.chart_area.setChart(chart)
 
     def _add_legend_item(self, fault_name: str, color: QColor):
@@ -557,15 +583,29 @@ class ChartContainer(QWidget):
         label.setFont(QFont("Microsoft YaHei", 9))
         self.legend_layout.addWidget(label)
 
-    def _set_axis_ranges(self, chart: QChart, feature_data: np.ndarray):
+    def _set_axis_ranges(self, chart: QChart, axis_x: QValueAxis, axis_y: QValueAxis, feature_data: np.ndarray):
         if len(feature_data) == 0:
             return
-        axes = chart.axes()
-        if len(axes) < 2:
-            return
-        axis_x = axes[0]
-        axis_y = axes[1]
         axis_x.setRange(0, len(feature_data) - 1)
-        y_min, y_max = float(feature_data.min()), float(feature_data.max())
-        margin = (y_max - y_min) * 0.15 if y_max > y_min else 1.0
-        axis_y.setRange(max(0, y_min - margin), y_max + margin)
+        
+        y_min = float(feature_data.min())
+        y_max = float(feature_data.max())
+        
+        if y_max > y_min:
+            margin = (y_max - y_min) * 0.15
+        elif y_max != 0:
+            margin = abs(y_max) * 0.1
+        else:
+            margin = 1.0
+        
+        axis_y.setRange(y_min - margin, y_max + margin)
+        
+        abs_max = max(abs(y_min), abs(y_max))
+        if abs_max == 0:
+            axis_y.setLabelFormat("%.1f")
+        elif abs_max >= 1000 or abs_max < 0.01:
+            axis_y.setLabelFormat("%.2e")
+        elif abs_max >= 1:
+            axis_y.setLabelFormat("%.2f")
+        else:
+            axis_y.setLabelFormat("%.4f")

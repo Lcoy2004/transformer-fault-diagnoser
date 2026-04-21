@@ -16,18 +16,16 @@ from sklearn.decomposition import PCA
 from database.db_manager import DatabaseManager
 from config import notify
 from config.constants import (
-    DGA_FEATURES_DB, PD_CHANNELS, PD_FEATURES, TABLE_CONFIGS, PCA_TABLE_MAPPING
+    DGA_FEATURES_DB, PD_CHANNELS, PD_FEATURES, TABLE_CONFIGS, PCA_TABLE_MAPPING, VALID_ALL_TABLES
 )
 from config.helpers import ensure_models_dir, ProgressHelper
 
 logger = logging.getLogger(__name__)
 
-VALID_TABLES = set(TABLE_CONFIGS.keys()) | set(PCA_TABLE_MAPPING.values())
-
 
 def _validate_table_name(table_name: str) -> bool:
     """验证表名是否在白名单中"""
-    return table_name in VALID_TABLES
+    return table_name in VALID_ALL_TABLES
 
 
 def train_pca_model(
@@ -84,7 +82,12 @@ def train_pca_model(
                             label_col = config['label_col']
                             location_col = config['location_col']
 
-                            cols_str = ', '.join(features + [label_col, location_col])
+                            all_cols = features + [label_col, location_col]
+                            if not all(c.isidentifier() for c in all_cols):
+                                logger.warning(f"表 {table_name} 列名包含非法字符，跳过")
+                                continue
+
+                            cols_str = ', '.join(all_cols)
                             query = f"SELECT {cols_str} FROM {table_name}"
                             df_table = pd.read_sql_query(query, conn)
 

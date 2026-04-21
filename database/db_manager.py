@@ -3,10 +3,11 @@
 """
 
 import logging
-import re
 import sqlite3
 from pathlib import Path
 from typing import List, Tuple
+
+from config.constants import VALID_ALL_TABLES
 
 logger = logging.getLogger(__name__)
 
@@ -134,8 +135,8 @@ class DatabaseManager:
             return data, columns
     
     def _is_valid_table_name(self, table_name: str) -> bool:
-        """验证表名是否合法"""
-        return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name))
+        """验证表名是否合法（白名单验证）"""
+        return table_name in VALID_ALL_TABLES
 
 
 class ConnectionContext:

@@ -104,3 +104,6 @@ htmlcov/
 
 # pyenv
 .python-version
+
+# 局部放电数据集
+局部放电数据集1号/

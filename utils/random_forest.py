@@ -14,12 +14,10 @@ from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
 
 from config import notify
 from database.db_manager import DatabaseManager
-from config.constants import PCA_TABLE_MAPPING
+from config.constants import PCA_TABLE_MAPPING, VALID_PCA_TABLES
 from config.helpers import ensure_models_dir, ProgressHelper
 
 logger = logging.getLogger(__name__)
-
-VALID_PCA_TABLES = set(PCA_TABLE_MAPPING.values())
 
 
 def _validate_table_name(table_name: str) -> bool:

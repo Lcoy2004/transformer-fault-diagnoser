@@ -99,7 +99,7 @@ TABLE_CONFIGS: Dict[str, Dict] = {
     },
     **{f'fusion_features_pd_ch{i}': {
         'name': f'通道{i}降维特征', 'type': f'PD_CH{i}_PCA',
-        'features': ['pc1', 'pc2', 'pc3', 'pc4', 'pc5'], 'label_col': 'fault_type', 'location_col': 'fault_location',
+        'features': [f'pc{j}' for j in range(1, 11)], 'label_col': 'fault_type', 'location_col': 'fault_location',
         'is_pca': True
     } for i in range(1, 5)}
 }
@@ -132,6 +132,12 @@ PCA_TABLE_MAPPING: Dict[str, str] = {
     'DGA': 'fusion_features_dga',
     **{f'PD_CH{i}': f'fusion_features_pd_ch{i}' for i in range(1, 5)}
 }
+
+VALID_TABLES: set = set(TABLE_CONFIGS.keys())
+
+VALID_PCA_TABLES: set = set(PCA_TABLE_MAPPING.values())
+
+VALID_ALL_TABLES: set = VALID_TABLES | VALID_PCA_TABLES
 
 # 关于窗口内容 - 从环境变量读取敏感信息
 _author_name = os.environ.get('AUTHOR_NAME', '开发者')

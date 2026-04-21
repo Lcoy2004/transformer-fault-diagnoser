@@ -10,12 +10,10 @@ import pandas as pd
 from database.db_manager import DatabaseManager
 from config import notify
 from config.constants import (
-    TABLE_TYPE_MAP, TABLE_CONFIGS, LABEL_MAPPING, COLUMN_MAPPING
+    TABLE_TYPE_MAP, TABLE_CONFIGS, LABEL_MAPPING, COLUMN_MAPPING, VALID_TABLES
 )
 
 logger = logging.getLogger(__name__)
-
-VALID_TABLES = set(TABLE_CONFIGS.keys())
 
 
 def _validate_table_name(table_name: str) -> bool:
@@ -254,6 +252,10 @@ class DataImporter:
             
             table_info = TABLE_CONFIGS[table_name]
             required_cols = table_info['features'] + [table_info['label_col'], table_info['location_col']]
+            
+            if not all(c.isidentifier() for c in required_cols):
+                raise ValueError(f"表 {table_name} 列名包含非法字符")
+            
             db_columns = ['sample_id'] + required_cols + ['source_file']
             
             columns_str = ', '.join(db_columns)

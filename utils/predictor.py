@@ -28,6 +28,27 @@ class Predictor:
         self.pcas = {}
         self.load_models()
 
+    @staticmethod
+    def _format_coords(coords_pred) -> str:
+        """将预测坐标格式化为字符串"""
+        if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
+            coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
+            x, y, z = coords_pred
+            return f"({x:.4f}, {y:.4f}, {z:.4f})"
+        elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
+            coords_array = np.array(coords_pred[:3], dtype=float)
+            coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
+            x, y, z = coords_array
+            return f"({x:.4f}, {y:.4f}, {z:.4f})"
+        return None
+
+    def _get_pca_n_components(self) -> int:
+        """获取PD通道的PCA主成分数量（从已加载的PCA模型中推断）"""
+        for ch in PD_CHANNELS:
+            if ch in self.pcas:
+                return self.pcas[ch].n_components_
+        return 0
+
     def load_models(self):
         """加载模型 - 支持分离的类型/定位模型"""
         models_dir = get_models_dir()
@@ -106,7 +127,6 @@ class Predictor:
             if ch in input_data_dict and ch in self.pcas:
                 ch_data = input_data_dict[ch]
                 
-                # 验证输入数据维度
                 expected_dim = self.scalers[ch].n_features_in_
                 actual_dim = len(ch_data) if hasattr(ch_data, '__len__') else 0
                 
@@ -128,6 +148,13 @@ class Predictor:
                 n_components = pca.n_components_
                 fused_data.append(np.zeros(n_components))
                 self._logger.warning(f"[警告] {ch} 数据缺失，使用零填充")
+            elif ch in input_data_dict:
+                n_components = self._get_pca_n_components()
+                if n_components > 0:
+                    fused_data.append(np.zeros(n_components))
+                    self._logger.warning(f"[警告] {ch} 有输入数据但PCA模型不存在，使用零填充({n_components}维)")
+                else:
+                    self._logger.warning(f"[警告] {ch} 有输入数据但无可用PCA模型，跳过该通道")
 
         if not any(np.any(d != 0) for d in fused_data):
             raise ValueError("[错误] 没有有效的超声波PD数据")
@@ -155,18 +182,7 @@ class Predictor:
             if model_name in self.models_location:
                 location_model = self.models_location[model_name]
                 coords_pred = location_model.predict(X)[0]
-
-                if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
-                    coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
-                    x, y, z = coords_pred
-                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
-                elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
-                    coords_array = np.array(coords_pred[:3], dtype=float)
-                    coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
-                    x, y, z = coords_array
-                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
-                else:
-                    fault_location = None
+                fault_location = self._format_coords(coords_pred)
             else:
                 fault_location = None
 
@@ -328,16 +344,7 @@ class Predictor:
             if model_name in self.models_location:
                 location_model = self.models_location[model_name]
                 coords_pred = location_model.predict(X_pca)[0]
-                
-                if isinstance(coords_pred, np.ndarray) and len(coords_pred) == 3:
-                    coords_pred = np.nan_to_num(coords_pred, nan=0.0, posinf=1e6, neginf=-1e6)
-                    x, y, z = coords_pred
-                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
-                elif isinstance(coords_pred, (list, tuple)) and len(coords_pred) >= 3:
-                    coords_array = np.array(coords_pred[:3], dtype=float)
-                    coords_array = np.nan_to_num(coords_array, nan=0.0, posinf=1e6, neginf=-1e6)
-                    x, y, z = coords_array
-                    fault_location = f"({x:.4f}, {y:.4f}, {z:.4f})"
+                fault_location = self._format_coords(coords_pred)
 
             return fault_type, fault_location
 

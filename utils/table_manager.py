@@ -114,4 +114,6 @@ class TableManager:
     def get_current_table(self) -> Optional[str]:
         """获取当前选中的表名"""
         name = self._selector.currentText()
-        return name if name else None
+        if not name or name == "暂无数据表":
+            return None
+        return name
