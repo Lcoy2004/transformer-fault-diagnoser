@@ -55,8 +55,8 @@ class Predictor:
 
         try:
             for data_type in ['DGA'] + PD_CHANNELS:
-                scaler_path = f'{models_dir}/scaler_{data_type}.pkl'
-                pca_path = f'{models_dir}/pca_{data_type}.pkl'
+                scaler_path = os.path.join(models_dir, f'scaler_{data_type}.pkl')
+                pca_path = os.path.join(models_dir, f'pca_{data_type}.pkl')
 
                 if os.path.exists(scaler_path) and os.path.exists(pca_path):
                     try:
@@ -71,8 +71,8 @@ class Predictor:
                             del self.pcas[data_type]
 
             for model_name in ['DGA', 'PD_FUSION']:
-                type_model_path = f'{models_dir}/random_forest_{model_name.lower()}_type.pkl'
-                location_model_path = f'{models_dir}/random_forest_{model_name.lower()}_location.pkl'
+                type_model_path = os.path.join(models_dir, f'random_forest_{model_name.lower()}_type.pkl')
+                location_model_path = os.path.join(models_dir, f'random_forest_{model_name.lower()}_location.pkl')
 
                 if os.path.exists(type_model_path):
                     try:

@@ -22,18 +22,24 @@ class DataProcessor:
         self._db: Optional[DatabaseManager] = None
         self._importer: Optional[DataImporter] = None
         self._predictor: Optional[Predictor] = None
+        self._init_failed: bool = False
         self._init()
     
     def _init(self) -> None:
         """初始化"""
+        if self._init_failed:
+            raise RuntimeError("数据处理器初始化已失败，无法重新初始化")
+        
         try:
             self._db = DatabaseManager()
             self._importer = DataImporter(self._db)
             self._predictor = Predictor()
             logger.info("数据处理器初始化完成")
         except Exception as e:
+            self._init_failed = True
             logger.error(f"初始化失败: {e}")
             notify(f"初始化失败: {e}")
+            raise
     
     def import_data(
         self,

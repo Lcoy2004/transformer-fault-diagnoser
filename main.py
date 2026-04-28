@@ -3,17 +3,17 @@
 """
 
 import sys
+import os
 
 # 隐藏控制台窗口（Windows）- 必须在最开始执行
-if sys.platform == 'win32':
+# 可通过设置环境变量 SHOW_CONSOLE=1 在开发调试时显示控制台
+if sys.platform == 'win32' and os.environ.get('SHOW_CONSOLE', '0') != '1':
     import ctypes
     kernel32 = ctypes.windll.kernel32
     user32 = ctypes.windll.user32
     console_window = kernel32.GetConsoleWindow()
     if console_window:
         user32.ShowWindow(console_window, 0)  # SW_HIDE = 0
-
-import os
 os.environ['QT_LOGGING_TO_STDOUT'] = '0'
 os.environ['QT_DEBUG_PLUGINS'] = '0'
 os.environ['QT_SCALE_FACTOR'] = '1'

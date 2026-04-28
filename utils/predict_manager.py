@@ -121,6 +121,8 @@ class PredictManager:
         Returns:
             预测结果字典
         """
+        import traceback
+        
         has_dga = 'DGA' in all_data
 
         result = {'mode': '', 'data': None, 'error': None}
@@ -157,9 +159,9 @@ class PredictManager:
                         progress_value_callback=progress_value_callback
                     )
                 except Exception as e:
-                    result['error'] = str(e)
+                    result['error'] = f"{str(e)}\n{traceback.format_exc()}"
         except Exception as e:
-            result['error'] = str(e)
+            result['error'] = f"{str(e)}\n{traceback.format_exc()}"
 
         return result
 

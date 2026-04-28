@@ -91,9 +91,11 @@ class ModelManager:
             <table style="border-collapse:collapse;width:100%;font-size:11px;margin:6px 0;">
                 <tr style="background:#f5f5f5;">
                     <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">数据源</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:center;">主成分数</th>
+                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:center;">原始特征</th>
+                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:center;">主成分</th>
+                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:center;">降维比例</th>
                     <th style="border:1px solid #ddd;padding:4px 6px;text-align:center;">累计方差</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">各成分贡献</th>
+                    <th style="border:1px solid #ddd;padding:4px 6px;text-align:left;">方差分析</th>
                 </tr>
             """
 
@@ -101,20 +103,43 @@ class ModelManager:
                 explained_variance = pca.explained_variance_ratio_
                 cumulative_variance = explained_variance.cumsum()
                 n_components = len(explained_variance)
-                variance_list = [f"{v:.2%}" for v in explained_variance]
+                
+                n_features = all_scalers.get(source).n_features_in_ if source in all_scalers else n_components
+                reduction_ratio = (1 - n_components / n_features) * 100 if n_features > 0 else 0
+                
+                is_no_reduction = n_components >= n_features
+                reduction_color = "#f57c00" if is_no_reduction else "#2e7d32"
+                reduction_text = f"{reduction_ratio:.1f}%" if not is_no_reduction else "未降维"
+                
+                cum_80_idx = next((j for j, v in enumerate(cumulative_variance) if v >= 0.8), n_components - 1)
+                cum_90_idx = next((j for j, v in enumerate(cumulative_variance) if v >= 0.9), n_components - 1)
+                cum_95_idx = next((j for j, v in enumerate(cumulative_variance) if v >= 0.95), n_components - 1)
+                
+                variance_info = f"80%需{cum_80_idx+1}个, 90%需{cum_90_idx+1}个, 95%需{cum_95_idx+1}个"
 
                 bg_color = "#fafafa" if i % 2 == 0 else "#fff"
                 table_html += f"""
                 <tr style="background:{bg_color};">
                     <td style="border:1px solid #ddd;padding:4px 6px;"><b>{source}</b></td>
+                    <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{n_features}</td>
                     <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{n_components}</td>
+                    <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;color:{reduction_color};"><b>{reduction_text}</b></td>
                     <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;color:#2e7d32;"><b>{cumulative_variance[-1]:.2%}</b></td>
-                    <td style="border:1px solid #ddd;padding:4px 6px;font-size:10px;">{', '.join(variance_list)}</td>
+                    <td style="border:1px solid #ddd;padding:4px 6px;font-size:9px;color:#666;">{variance_info}</td>
                 </tr>
                 """
 
             table_html += "</table>"
             self._ui.update_output_html(table_html)
+            
+            # 添加警告说明
+            warning_html = """
+            <div style="background:#fff3e0;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:10px;color:#e65100;">
+                <b>说明:</b> 当原始特征数 ≤ 目标主成分数时，无法有效降维，将保留所有特征。<br>
+                DGA目标: 5个主成分 | PD目标: 10个主成分
+            </div>
+            """
+            self._ui.update_output_html(warning_html)
 
         # 统计信息
         total_samples = sum(len(d['X']) for d in processed_data)

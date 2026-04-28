@@ -80,8 +80,9 @@ class ThreadManager:
         if self._worker and self._worker.isRunning():
             self._worker.request_interruption()
             self._worker.quit()
-            self._worker.wait(3000)
-            if self._worker.isRunning():
+            # 等待线程优雅退出，最多5秒
+            if not self._worker.wait(5000):
+                logger.warning("线程未在5秒内退出，强制终止")
                 self._worker.terminate()
                 self._worker.wait(1000)
             self._worker = None

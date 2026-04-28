@@ -148,10 +148,35 @@ def train_pca_model(
                 X_scaled = scaler.fit_transform(X)
                 all_scalers[source] = scaler
                 
+                n_samples, n_features = X_scaled.shape
+                
                 if source == 'DGA':
-                    n_components = min(5, X_scaled.shape[1])
+                    target_components = 5
                 else:
-                    n_components = min(10, X_scaled.shape[1])
+                    target_components = 10
+                
+                if n_features <= target_components:
+                    logger.warning(
+                        f"[警告] {source} 原始特征数({n_features}) <= 目标主成分数({target_components})，"
+                        f"无法有效降维。将保留所有特征。"
+                    )
+                    progress.send(
+                        f"⚠ {source}: 特征数({n_features})不足，无法降维，保留全部特征"
+                    )
+                
+                if n_samples < target_components:
+                    logger.warning(
+                        f"[警告] {source} 样本数({n_samples}) < 目标主成分数({target_components})，"
+                        f"将调整主成分数为 {n_samples}"
+                    )
+                
+                n_components = min(target_components, n_features, n_samples)
+                
+                if n_components < 1:
+                    error_msg = f"[错误] {source} 无法进行PCA：样本数或特征数为0"
+                    logger.error(error_msg)
+                    progress.send(error_msg)
+                    continue
                 
                 pca = PCA(n_components=n_components)
                 X_pca = pca.fit_transform(X_scaled)
@@ -159,7 +184,17 @@ def train_pca_model(
                 
                 explained_variance = pca.explained_variance_ratio_
                 cumulative_variance = explained_variance.cumsum()
-                logger.info(f"{source} PCA维度: {n_components}, 累计方差贡献率: {cumulative_variance[-1]:.4f}")
+                
+                reduction_ratio = (1 - n_components / n_features) * 100 if n_features > 0 else 0
+                
+                logger.info(
+                    f"{source} PCA: 原始特征={n_features}, 主成分={n_components}, "
+                    f"降维比例={reduction_ratio:.1f}%, 累计方差贡献率={cumulative_variance[-1]:.4f}"
+                )
+                progress.send(
+                    f"{source}: {n_features}维 → {n_components}维 (降维{reduction_ratio:.1f}%), "
+                    f"累计方差={cumulative_variance[-1]:.2%}"
+                )
                 
                 label_col = TABLE_CONFIGS[table_name]['label_col']
                 location_col = TABLE_CONFIGS[table_name]['location_col']

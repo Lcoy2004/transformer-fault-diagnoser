@@ -297,6 +297,7 @@ class DataImporter:
                 imported_count = len(all_params)
             except Exception as e:
                 logger.error(f"批量插入失败: {e}，尝试逐条插入")
+                conn.rollback()
                 imported_count = 0
                 for params in all_params:
                     try:
@@ -304,6 +305,7 @@ class DataImporter:
                         imported_count += 1
                     except Exception as ex:
                         logger.error(f"插入记录失败: {ex}")
+                        conn.rollback()
                         continue
             
             conn.commit()
